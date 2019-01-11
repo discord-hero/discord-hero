@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+sphinx = "*"
+pytest = "*"
+pytest-asyncio = "*"
+
+[packages]
+responder = "*"
+tortoise-orm = "*"
+discord-py = {git = "https://github.com/Rapptz/discord.py",ref = "rewrite"}
+asyncpg = "*"
+aiosqlite = "*"
+click = "*"
+aiologger = "*"
+aiocache = {extras = ["redis"],version = "*"}

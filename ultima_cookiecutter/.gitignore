@@ -1,0 +1,7 @@
+/config.json
+/test_config.json
+
+/.idea
+*__pycache__
+*.pyc
+*.iml
