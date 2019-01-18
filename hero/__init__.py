@@ -1,11 +1,11 @@
 """
-Ultima
-~~~~~
+discord-hero
+~~~~~~~~~~~~
 
-Discord Application Framework
+Discord Application Framework for humans
 
 :copyright: (c) 2019 monospacedmagic et al.
-:license: MIT, see LICENSE for more details.
+:license: Apache-2.0 OR MIT
 """
 
 
@@ -18,7 +18,7 @@ from collections import namedtuple
 
 from . import i18n
 
-builtins._ = i18n.dummy_translation
+builtins._ = i18n.translate
 
 from tortoise import fields
 from tortoise.models import Model
@@ -27,20 +27,24 @@ from discord.ext.commands import command
 
 from .core import Core
 from .cog import Cog
-from .conf import production_config, test_config
-from .models import Settings, User, Guild, TextChannel, VoiceChannel, Role, Member, Message
+from .conf import Extension, production_config, test_config
+from .db import Database, Object
+from .models import (Settings, User, Guild, TextChannel, VoiceChannel,
+                     Role, Emoji, Member, Message)
 from .cache import cached, get_cache
 
 
-__all__ = ['ROOT_DIR', 'Core', 'Cog', 'User', 'Guild', 'TextChannel', 'VoiceChannel',
-           'Role', 'Member', 'Message', 'cached', 'get_cache', 'CONFIG', 'TEST']
+__all__ = ['ROOT_DIR', 'Core', 'Cog', 'Extension', 'Database', 'Object', 'User',
+           'Guild', 'TextChannel', 'VoiceChannel', 'Role', 'Emoji', 'Member',
+           'Message', 'cached', 'get_cache', 'CONFIG', 'TEST']
 
 
 __title__ = 'Ultima'
 __author__ = 'monospacedmagic et al.'
-__license__ = 'ISC'
+__license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019 monospacedmagic et al.'
 __version__ = '0.1.0'
+__is_release__ = False
 
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial')

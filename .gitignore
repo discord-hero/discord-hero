@@ -1,5 +1,5 @@
 /.idea
 *__pycache__
 *.pyc
-*.iml
+/discord-hero.iml
 /Pipfile.lock

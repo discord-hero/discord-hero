@@ -1,5 +1,4 @@
-/config.json
-/test_config.json
+/config
 
 /.idea
 *__pycache__

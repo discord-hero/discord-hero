@@ -1,7 +1,15 @@
-"""A collection of various helper functions and utility functions."""
+"""A collection of various helper functions and utility functions.
+
+discord-hero: Discord Application Framework for humans
+
+:copyright: (c) 2019 monospacedmagic et al.
+:license: Apache-2.0 OR MIT
+"""
 
 import asyncio
+import collections
 import functools
+import re
 
 import aiohttp
 
@@ -9,6 +17,27 @@ import websockets
 
 from discord.utils import maybe_coroutine
 from discord.errors import HTTPException, GatewayNotFound, ConnectionClosed
+
+
+def ismodelobject(obj):
+    return getattr(obj, '_inited', False)
+
+
+def snakecaseify(s: str):
+    s = re.sub(r"([A-Z]+)([A-Z][a-z])", r'\1_\2', s)
+    s = re.sub(r"([a-z\d])([A-Z])", r'\1_\2', s)
+    s = s.replace("-", "_")
+    return s.lower()
+
+
+def namedtuple_with_defaults(typename, field_names, *, rename=False, defaults=None, module=None):
+    # backport from Python 3.7
+    T = collections.namedtuple(typename, field_names, rename=rename, module=module)
+    if defaults is not None:
+        T.__new__.__defaults__ = (None,) * len(T._fields)
+        prototype = T(*defaults)
+        T.__new__.__defaults__ = tuple(prototype)
+    return T
 
 
 def estimate_reading_time(text):
@@ -32,15 +61,13 @@ def autorestart(delay_start=None, pause=None, restart_check=None):
     """Decorator that automatically restarts the decorated
     coroutine function when a connection issue occurs.
 
-    Parameters
-    ----------
-    delay_start : Callable
-        Will be yielded from before starting the
+    :param Optional[Callable] delay_start:
+        Will be awaited before starting the
         execution of the decorated coroutine function.
-    pause : Callable
-        Will be yielded from before restarting the
+    :param Optional[Callable] pause:
+        Will be awaited before restarting the
         execution of the decorated coroutine function.
-    restart_check : Callable
+    :param Optional[Callable] restart_check:
         A callable that checks whether the decorated
         coroutine function should be restarted if it
         has been cancelled. Should return a truth value.
@@ -97,7 +124,7 @@ def cached(timeout=None, validity_check=None):
     :param int timeout:
         How long the returned value of the decorated function or
         coroutine should stay in the cache before it is discarded.
-    :param Callable validity_check:
+    :param Optional[Callable] validity_check:
         Callable, should return True if cached value is still valid, else None.
         Takes the ``cached_value`` that was originally returned by the decorated function.
     :return:
@@ -109,12 +136,12 @@ def cached(timeout=None, validity_check=None):
         @cached(timeout=1800)
         async def expensive_coroutine():
             # highly complicated and expensive calculation
-            await asyncio.sleep(10000)
+            await asyncio.sleep(10)
             return 1 + 1
     """
-    def wrapper(func):
+    def wrapper(_func):
         """Wraps the function"""
-        @functools.wraps(func)
+        @functools.wraps(_func)
         def wrapped(func):
             """Actual decorator"""
             # TODO

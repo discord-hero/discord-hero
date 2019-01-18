@@ -1,3 +1,10 @@
+"""discord-hero: Discord Application Framework for humans
+
+:copyright: (c) 2019 monospacedmagic et al.
+:license: Apache-2.0 OR MIT
+"""
+
+
 import asyncio
 import importlib
 import inspect
@@ -7,6 +14,7 @@ import os
 import sys
 import traceback
 import types
+from typing import Type, Union
 
 import aiohttp
 
@@ -15,9 +23,12 @@ from discord.ext import commands
 
 import responder
 
-import ultima
+import hero
 from . import utils
 from .models import Settings, User, Guild, TextChannel
+from .conf import Extensions
+from .db import Database
+from .cache import get_cache
 
 
 class CommandConflict(discord.ClientException):
@@ -27,16 +38,19 @@ class CommandConflict(discord.ClientException):
 class Core(commands.Bot, responder.API):
     """Represents Ultima's Core."""
 
-    def __init__(self, name, loop=None):
+    def __init__(self, name='default', loop=None):
+        self.name = name
         self.settings = Settings(name=name)
+        self.extensions = Extensions(name=name)
+        self.cache = get_cache()
+        self.db = Database(self)
         self.base = BaseController(self)
         super(Core, self).__init__(command_prefix=self.base.get_prefixes(),
                                    loop=loop, description=self.base.get_description(),
                                    pm_help=None, cache_auth=False,
                                    command_not_found=strings.command_not_found,
                                    command_has_no_subcommands=strings.command_has_no_subcommands)
-        self.base.cache.loop = self.loop
-        self.base.cache.loop = self.loop
+        self._connection.core = self
 
         self.create_task(self.wait_for_restart)
         self.create_task(self.wait_for_shutdown)
@@ -44,13 +58,22 @@ class Core(commands.Bot, responder.API):
         self.extra_tasks = {}
         self._stopped = asyncio.Event(loop=self.loop)
 
-        user_agent = 'Ultima (https://github.com/monospacedmagic/Ultima {0}) Python/{1} aiohttp/{2} discord.py/{3}'
-        self.http.user_agent = user_agent.format(ultima.__version__, sys.version.split(maxsplit=1)[0],
+        user_agent = 'Hero (https://github.com/monospacedmagic/discord-hero {0}) Python/{1} aiohttp/{2} discord.py/{3}'
+        self.http.user_agent = user_agent.format(hero.__version__, sys.version.split(maxsplit=1)[0],
                                                  aiohttp.__version__, discord.__version__)
+
+    def __getattr__(self, item):
+        return self.extensions.get(item, None)
 
     @property
     def is_configured(self):
-        return self.base.get_token() is not None
+        return hero.CONFIG['token'] is not None
+
+    @property
+    @hero.cached(include_self=False)
+    def translations(self):
+        # TODO
+        return {}
 
     def initial_config(self):
         print(strings.setup_greeting)
@@ -212,6 +235,14 @@ class Core(commands.Bot, responder.API):
 
         else:
             raise TypeError("cog_or_command must be either a cog or a command")
+
+    async def get(self, discord_cls, id: int):
+        if discord_cls not in hero.db.discord_models:
+            raise TypeError("discord_cls has to be a Discord class")
+
+        if discord_cls == discord.User:
+            # TODO
+            pass
 
     def create_task(self, coro, *args, resume_check=None, **kwargs):
         def actual_resume_check():
@@ -539,6 +570,7 @@ class Core(commands.Bot, responder.API):
         print(strings.owner_recognized.format(data.owner.name))
 
     async def run(self, reconnect=True):
+        # TODO create essential user groups if they don't exist
         self._load_cogs()
 
         if self.base.get_prefixes():

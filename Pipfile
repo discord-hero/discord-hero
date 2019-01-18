@@ -17,3 +17,4 @@ aiosqlite = "*"
 click = "*"
 aiologger = "*"
 aiocache = {extras = ["redis"],version = "*"}
+toml = "*"

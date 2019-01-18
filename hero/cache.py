@@ -1,12 +1,19 @@
+"""discord-hero: Discord Application Framework for humans
+
+:copyright: (c) 2019 monospacedmagic et al.
+:license: Apache-2.0 OR MIT
+"""
+
+
 import typing
 
 import aiocache
 
-import ultima
+import hero
 from .errors import ConfigurationError
 
 
-if ultima.CONFIG['cache'] is None:
+if hero.CONFIG['cache'] is None:
     _Cache = aiocache.SimpleMemoryCache
 else:
     _Cache = aiocache.RedisCache
@@ -33,7 +40,7 @@ def get_cache(namespace=None):
 
 
 class Cache:
-    """Represents Ultima's cache.
+    """Represents Hero's cache.
     This class is mainly used to store keys into and retrieve keys
     from the cache.
 
@@ -43,7 +50,7 @@ class Cache:
     :type extension: typing.Optional[str]
     :param core:
         The core.
-    :type core: ultima.Core
+    :type core: hero.Core
     :ivar backend:
         The cache backend the :class:`Cache` connects to.
     :ivar extension:
@@ -53,7 +60,7 @@ class Cache:
         The core.
     """
     def __init__(self, extension=None, core=None, loop=None):
-        self.backend = get_cache(extension)  #: aiocache.
+        self.backend = get_cache(extension)
         self.extension = extension
         self.bot = core
         if loop is None and self.bot is not None and hasattr(self.bot, 'loop'):
@@ -84,30 +91,38 @@ def cached(expire_after=None, include_self=True):
         function are equal to ones that were passed to the
         function before.
     :type include_self: typing.Optional[bool]
+
+    Example: ::
+
+        @cached(expire_after=1800)
+        async def expensive_coroutine():
+            # highly complicated and expensive calculation
+            await asyncio.sleep(10)
+            return 1 + 1
     """
     return aiocache.cached(ttl=expire_after, alias='default', noself=not include_self)
 
 
 def init():
-    cache_config = ultima.CONFIG.get('cache', None)
+    cache_config = hero.CONFIG.get('cache', None)
     if cache_config is None or cache_config.get('backend', None) is None:
         _cache_config = {
             'default': {
                 'cache': 'aiocache.SimpleMemoryCache',
-                'namespace': 'ultima'
+                'namespace': 'hero'
             }
         }
-    elif ultima.CONFIG['cache']['backend'] == 'redis':
+    elif hero.CONFIG['cache']['backend'] == 'redis':
         _cache_config = {
             'default': {
                 'cache': 'aiocache.RedisCache',
-                'endpoint': ultima.CONFIG['cache'].get('host', '127.0.0.1'),
-                'port': ultima.CONFIG['cache'].get('port', 6379),
-                'password': ultima.CONFIG['cache'].get('password', None),
-                'db': ultima.CONFIG['cache'].get('db', 0),
-                'namespace': ultima.CONFIG['cache'].get('namespace', 'ultima'),
-                'pool_min_size': ultima.CONFIG['cache'].get('pool_min_size', 1),
-                'pool_max_size': ultima.CONFIG['cache'].get('pool_max_size', 10),
+                'endpoint': hero.CONFIG['cache'].get('host', '127.0.0.1'),
+                'port': hero.CONFIG['cache'].get('port', 6379),
+                'password': hero.CONFIG['cache'].get('password', None),
+                'db': hero.CONFIG['cache'].get('db', 0),
+                'namespace': hero.CONFIG['cache'].get('namespace', 'hero'),
+                'pool_min_size': hero.CONFIG['cache'].get('pool_min_size', 1),
+                'pool_max_size': hero.CONFIG['cache'].get('pool_max_size', 10),
                 'serializer': {
                     'class': 'aiocache.serializers.PickleSerializer'
                 },
@@ -119,6 +134,6 @@ def init():
         }
     else:
         raise ConfigurationError(f"The configuration uses an unsupported cache backend: "
-                                 f"{ultima.CONFIG['cache']['backend']}")
+                                 f"{hero.CONFIG['cache']['backend']}")
 
     aiocache.caches.set_config(_cache_config)
