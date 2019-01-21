@@ -14,7 +14,7 @@ from .db import Database
 
 
 def main(test: bool=False):
-    """Run Ultima.
+    """Run Hero.
 
     :param test: Whether or not this is a test run.
     :type test: bool

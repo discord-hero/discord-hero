@@ -36,7 +36,7 @@ class CommandConflict(discord.ClientException):
 
 
 class Core(commands.Bot, responder.API):
-    """Represents Ultima's Core."""
+    """Represents Hero's Core."""
 
     def __init__(self, name='default', loop=None):
         self.name = name

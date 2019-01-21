@@ -39,7 +39,7 @@ __all__ = ['ROOT_DIR', 'Core', 'Cog', 'Extension', 'Database', 'Object', 'User',
            'Message', 'cached', 'get_cache', 'CONFIG', 'TEST']
 
 
-__title__ = 'Ultima'
+__title__ = 'Hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019 monospacedmagic et al.'
@@ -68,9 +68,9 @@ def TEST(is_test: bool):
     global __test
     global CONFIG
     if not isinstance(is_test, bool):
-        raise ValueError(_("ultima.TEST must be set to a boolean value"))
+        raise ValueError(_("hero.TEST must be set to a boolean value"))
     if isinstance(__test, bool):
-        raise RuntimeError(_("Tried to set ultima.TEST when it was already set"))
+        raise RuntimeError(_("Tried to set hero.TEST when it was already set"))
     if is_test:
         CONFIG = test_config
     else:
