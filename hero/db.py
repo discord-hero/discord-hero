@@ -60,8 +60,9 @@ discord_model_map = dict(zip(discord_models, hero_models))
 # reverse version
 hero_model_map = dict(zip(hero_models, discord_models))
 
-if hero.CONFIG['db']['backend'] == 'sqlite3':
-    _DatabaseClient = tortoise.backends.sqlite.client.SqliteClient
+
+def get_database_client(name='default'):
+    return Tortoise.get_connection(name)
 
 
 class Database:
@@ -99,10 +100,6 @@ class Database:
 
     async def get_user(self, *args, **kwargs):
         await self.get(*args, **kwargs)
-
-
-def get_database_client(name='default'):
-    return Tortoise.get_connection(name)
 
 
 def init(core: hero.Core):

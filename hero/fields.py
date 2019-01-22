@@ -17,7 +17,7 @@ from tortoise.fields import (BigIntField, BooleanField, CharField, CASCADE,
 
 import hero
 from . import db
-from .i18n import Language
+from .i18n import Languages
 
 
 class DiscordField(BigIntField):
@@ -79,12 +79,12 @@ class LanguageField(CharField):
         kwargs['max_length'] = 16
         super().__init__(**kwargs)
 
-    def to_db_value(self, value: Language, instance) -> str:
+    def to_db_value(self, value: Languages, instance) -> str:
         return value.value
 
-    def to_python_value(self, value: str) -> Language:
+    def to_python_value(self, value: str) -> Languages:
         try:
-            return Language(value)
+            return Languages(value)
         except ValueError:
             raise ValueError(
                 "{language_value} is not a valid language".format(language_value=value)

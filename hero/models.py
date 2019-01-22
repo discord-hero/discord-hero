@@ -11,7 +11,7 @@ import tortoise
 
 import hero
 from hero import db, fields, logging
-from .i18n import Language
+from .i18n import Languages
 
 
 class Model(tortoise.models.Model):
@@ -32,10 +32,7 @@ class DiscordModel(Model):
 
     @property
     def _core(self):
-        if self._discord_obj is None:
-            return None
-        # TODO find a cleaner way to do this
-        return self._discord_obj._state.core
+        return self.db.core
 
     @classmethod
     def from_discord_obj(cls, discord_obj):
@@ -107,7 +104,7 @@ class Settings(hero.Model):
     name = fields.CharField(pk=True, max_length=64)
     token = fields.CharField(max_length=64)
     log_channel = fields.TextChannelField(null=True)
-    lang = fields.LanguageField(default=Language.default.value)
+    lang = fields.LanguageField(default=Languages.default.value)
 
     @property
     def logging_level(self):
@@ -121,7 +118,7 @@ class User(DiscordModel):
     is_staff = fields.BooleanField(default=False, db_index=True)
     command_count = fields.IntField(default=0)
     is_active = fields.BooleanField(default=True, db_index=True)
-    lang = fields.LanguageField(default=Language.default.value)
+    lang = fields.LanguageField(default=Languages.default.value)
     # TODO when user wants to delete their data, delete user,
     # let the DB cascade, and create a new user with is_active=False
 
@@ -133,7 +130,7 @@ class Guild(DiscordModel):
     url = fields.CharField(max_length=256, unique=True)
     is_deleted = fields.BooleanField(default=False)
     prefix = fields.CharField(max_length=64)
-    lang = fields.LanguageField(default=Language.default.value)
+    lang = fields.LanguageField(default=Languages.default.value)
     # members = fields.ManyToManyField('ultima.User', through='ultima.Member')
 
     @property
@@ -155,7 +152,7 @@ class Guild(DiscordModel):
 
 class TextChannel(DiscordModel):
     guild = fields.GuildField(on_delete=fields.CASCADE)
-    lang = fields.LanguageField(default=Language.default.value)
+    lang = fields.LanguageField(default=Languages.default.value)
 
 
 class VoiceChannel(DiscordModel):

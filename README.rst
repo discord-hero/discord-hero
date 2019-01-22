@@ -82,7 +82,7 @@ entered by then. ::
 
 For production applications: ::
 
-   pipenv install asyncpg aioredis --skip-lock
+   pipenv install discord-hero[postgresql,redis] --skip-lock
    pipenv lock --pre
 
 Run discord-hero in production mode: ::

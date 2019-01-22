@@ -8,13 +8,11 @@
 import asyncio
 import importlib
 import inspect
-import logging
 import math
 import os
 import sys
 import traceback
 import types
-from typing import Type, Union
 
 import aiohttp
 
@@ -24,10 +22,9 @@ from discord.ext import commands
 import responder
 
 import hero
-from . import utils
-from .models import Settings, User, Guild, TextChannel
+from . import db, strings, utils
+from .models import Settings
 from .conf import Extensions
-from .db import Database
 from .cache import get_cache
 
 
@@ -43,8 +40,9 @@ class Core(commands.Bot, responder.API):
         self.settings = Settings(name=name)
         self.extensions = Extensions(name=name)
         self.cache = get_cache()
-        self.db = Database(self)
-        self.base = BaseController(self)
+        self.db = db.Database(self)
+        self.db_client = db.get_database_client(name=name)
+        self.db_client.core = self
         super(Core, self).__init__(command_prefix=self.base.get_prefixes(),
                                    loop=loop, description=self.base.get_description(),
                                    pm_help=None, cache_auth=False,
@@ -74,31 +72,6 @@ class Core(commands.Bot, responder.API):
     def translations(self):
         # TODO
         return {}
-
-    def initial_config(self):
-        print(strings.setup_greeting)
-
-        entered_token = input("> ")
-
-        if len(entered_token) >= 50:  # assuming token
-            self.base.set_token(entered_token)
-        else:
-            print(strings.not_a_token)
-            exit(1)
-
-        while True:
-            print(strings.choose_prefix)
-            while True:
-                chosen_prefix = input('> ')
-                if chosen_prefix:
-                    break
-            print(strings.confirm_prefix.format(chosen_prefix))
-            if input("> ") in ['y', 'yes']:
-                self.base.add_prefix(chosen_prefix)
-                break
-
-        print(strings.setup_finished)
-        input("\n")
 
     async def on_command_completion(self, ctx):
         author = ctx.message.author
@@ -134,7 +107,7 @@ class Core(commands.Bot, responder.API):
         # print(strings.connected_to_servers.format(Guild.count()))
         # print(strings.connected_to_channels.format(TextChannel.count()))
         # print(strings.connected_to_users.format(User.count()))
-        print("\n{} active extensions".format(len(self.settings.extensions)))
+        print("\n{} active extensions".format(len(self.extensions)))
         prefix_label = strings.prefix_singular
         if len(self.base.get_prefixes()) > 1:
             prefix_label = strings.prefix_plural
@@ -197,7 +170,7 @@ class Core(commands.Bot, responder.API):
         self._resolve_groups(cog)
 
     def _resolve_groups(self, cog_or_command):
-        if isinstance(cog_or_command, Cog):
+        if isinstance(cog_or_command, hero.Cog):
             for _, member in inspect.getmembers(cog_or_command, lambda _member: isinstance(_member, commands.Command)):
                 self._resolve_groups(member)
 
@@ -339,7 +312,7 @@ class Core(commands.Bot, responder.API):
             cog_module.setup(self, name)
         else:
             cog_classes = inspect.getmembers(cog_module, lambda member: isinstance(member, type) and
-                                             issubclass(member, Cog) and member is not Cog)
+                                             issubclass(member, hero.Cog) and member is not hero.Cog)
             for _, _Cog in cog_classes:
                 if _Cog is None:
                     raise ImportError("The {} extension's cog module didn't have "
@@ -362,7 +335,7 @@ class Core(commands.Bot, responder.API):
             try:
                 self.load_extension(extension)
             except Exception as error:
-                if not settings.DEBUG:
+                if not hero.TEST:
                     print("{}: {}".format(error.__class__.__name__, str(error)))
                 else:
                     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
@@ -546,7 +519,7 @@ class Core(commands.Bot, responder.API):
         # and send it to ctx if settings.DEBUG is True
         await ctx.send("An error occured while running the command **{0}**.".format(ctx.command))
 
-        if settings.DEBUG:
+        if hero.TEST:
             error_details = traceback.format_exception(type(error), error, error.__traceback__)
             paginator = commands.Paginator(prefix='```py')
             for line in error_details:
@@ -570,7 +543,6 @@ class Core(commands.Bot, responder.API):
         print(strings.owner_recognized.format(data.owner.name))
 
     async def run(self, reconnect=True):
-        # TODO create essential user groups if they don't exist
         self._load_cogs()
 
         if self.base.get_prefixes():
@@ -590,66 +562,36 @@ class Core(commands.Bot, responder.API):
         await self._stopped.wait()
 
 
-class Cog:
-    """The base class for cogs, classes that include
-    commands, event listeners and background tasks
-
-    Parameters
-    ----------
-    bot : Core
-        The bot to add the cog to.
-    extension : str
-        The name of the extension the cog belongs to.
-
-    Attributes
-    ----------
-    log : logging.Logger
-        The cog's logger.
-    """
-
-    def __init__(self, bot, extension):
-        self.bot = bot
-        self.extension = extension
-
-        log_name = 'dwarf.' + extension + '.cogs'
-        if self.__module__ != 'cogs':
-            log_name += '.' + self.__module__
-        self.log = logging.getLogger('dwarf.' + extension + '.cogs')
-
-
-def main(loop=None, bot=None):
+def main(loop=None, core=None):
     if loop is None:
         loop = asyncio.get_event_loop()
 
-    if bot is None:
-        bot = Core(loop=loop)
-
-    if not bot.is_configured:
-        bot.initial_config()
+    if core is None:
+        core = Core(loop=loop)
 
     error = False
     error_message = ""
     try:
-        loop.run_until_complete(bot.run())
+        loop.run_until_complete(core.run())
     except discord.LoginFailure:
         error = True
         error_message = 'Invalid credentials'
         choice = input(strings.invalid_credentials)
         if choice.strip() == 'reset':
-            bot.base.delete_token()
+            core.base.delete_token()
         else:
-            bot.base.disable_restarting()
+            core.base.disable_restarting()
     except KeyboardInterrupt:
-        bot.base.disable_restarting()
-        loop.run_until_complete(bot.logout())
+        core.base.disable_restarting()
+        loop.run_until_complete(core.logout())
     except Exception as ex:
         error = True
         print(ex)
         error_message = traceback.format_exc()
-        bot.base.disable_restarting()
-        loop.run_until_complete(bot.logout())
+        core.base.disable_restarting()
+        loop.run_until_complete(core.logout())
     finally:
         if error:
             print(error_message)
 
-    return bot
+    return core

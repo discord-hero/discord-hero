@@ -4,11 +4,10 @@
 :license: Apache-2.0 OR MIT
 """
 
-
 from enum import Enum
 
 
-class Language(Enum):
+class Languages(Enum):
     # TODO
     en_us = 'en_US'
     default = 'en_US'

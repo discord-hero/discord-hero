@@ -45,12 +45,9 @@ def run(core=None):
 
 
 @cli.command()
-def install():
-    # use cookiecutter
-    # connect to DB
-    # set up tables
-    # connect to Redis
-    # set keys
+@cli.option('-t/-p', '--test/--prod', default=not hero.__is_release__)
+def configure():
+    # interactively generate a new config.json
     # TODO
     pass
 

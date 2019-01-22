@@ -70,6 +70,7 @@ __is_release__ = False
 
 CONFIG = None
 
+LANGUAGE = i18n.Languages.default
 
 __test = None
 

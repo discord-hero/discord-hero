@@ -138,8 +138,8 @@ setup(
     long_description=readme,
     long_description_content_type='text/rst',
     include_package_data=True,
-    keywords='hero',
-    name='hero',
+    keywords='discord bot framework',  # TODO
+    name='discord-hero',
     packages=find_packages(include=['hero']),
     python_requires=python_requirement,
     setup_requires=setup_requirements,
