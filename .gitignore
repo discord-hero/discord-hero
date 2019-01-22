@@ -3,3 +3,6 @@
 *.pyc
 /discord-hero.iml
 /Pipfile.lock
+/build
+/dist
+/*.egg-info

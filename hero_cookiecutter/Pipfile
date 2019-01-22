@@ -5,3 +5,6 @@ verify_ssl = true
 
 [packages]
 discord-hero = "*"
+
+[pipenv]
+allow_prereleases = true

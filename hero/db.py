@@ -5,10 +5,12 @@
 """
 
 
+import enum
 from typing import Union
 
 import discord
 
+import tortoise
 from tortoise import Tortoise
 
 import hero
@@ -34,6 +36,13 @@ class Object(discord.Object):
         pass
 
 
+class DatabaseBackends(enum.Enum):
+    SQLITE3 = 'sqlite3'
+    MYSQL = 'mysql'
+    POSTGRESQL = 'postgresql'
+
+
+# TODO turn these into enums
 discord_models = (discord.Message, discord.TextChannel,
                   discord.VoiceChannel, discord.User,
                   discord.Member, discord.Guild,
@@ -50,6 +59,9 @@ discord_model_map = dict(zip(discord_models, hero_models))
 
 # reverse version
 hero_model_map = dict(zip(hero_models, discord_models))
+
+if hero.CONFIG['db']['backend'] == 'sqlite3':
+    _DatabaseClient = tortoise.backends.sqlite.client.SqliteClient
 
 
 class Database:
@@ -89,6 +101,10 @@ class Database:
         await self.get(*args, **kwargs)
 
 
+def get_database_client(name='default'):
+    return Tortoise.get_connection(name)
+
+
 def init(core: hero.Core):
     # TODO
     if hero.CONFIG.get('db', None) is None:
@@ -111,4 +127,5 @@ def init(core: hero.Core):
         }
     elif hero.CONFIG['db']['backend'] == 'postgres':
         pass  # TODO
+    Tortoise.get_connection('default')
     Tortoise.init(config=_db_config)

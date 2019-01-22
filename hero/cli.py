@@ -14,9 +14,9 @@ from .main import main
 
 @click.group(name='main')
 @click.option('-t/-p', '--test/--prod', default=hero.__is_release__)
-def _main(test):
+def main_cli(test):
     main(test=test)
 
 
-command = _main.command
-group = _main.group
+command = main_cli.command
+group = main_cli.group

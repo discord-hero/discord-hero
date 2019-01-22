@@ -1,6 +1,11 @@
 import enum
 
 
+class BotPermissions(enum.Enum):
+    # TODO
+    pass
+
+
 class RateLimit:
     def __init__(self, times: int, per_seconds: int):
         self.times = times

@@ -12,7 +12,7 @@ import discord
 
 import hero
 from . import cli
-from .cli import _main as main
+from .cli import main_cli as main
 
 
 def run(core=None):

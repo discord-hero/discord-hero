@@ -8,7 +8,7 @@ Discord Application Framework for humans
 :license: Apache-2.0 OR MIT
 """
 
-
+import re
 import os
 
 ROOT_DIR = os.getcwd()
@@ -20,10 +20,10 @@ from . import i18n
 
 builtins._ = i18n.translate
 
-from tortoise import fields
-from tortoise.models import Model
+from . import fields
+from .models import Model
 
-from discord.ext.commands import command
+from discord.ext.commands import command, check, cooldown
 
 from .core import Core
 from .cog import Cog
@@ -43,13 +43,29 @@ __title__ = 'Hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019 monospacedmagic et al.'
-__version__ = '0.1.0'
-__is_release__ = False
-
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial')
 
-VERSION_INFO = VersionInfo(major=0, minor=1, micro=0, releaselevel='alpha', serial=0)
+version_pattern = re.compile(
+    # major
+    r'(0|[1-9]\d*)\.'
+    # minor
+    r'(0|[1-9]\d*)\.'
+    # micro
+    r'(0|[1-9]\d*)'
+    r'?(?:'
+    # releaselevel
+    r'-(0|[1-9]\d*|\d*[A-Z-a-z][\dA-Za-z-]*)(\.(0|[1-9]\d*|\d*[A-Za-z-][\dA-Za-z-]*))*'
+    r')'
+    r'?(?:'
+    # serial
+    r'\+([\dA-Za-z-]+(\.[\dA-Za-z-]*)*)'
+    r')'
+)
+
+__version__ = '0.1.0'
+VERSION = VersionInfo(*re.match(version_pattern, __version__))
+__is_release__ = False
 
 
 CONFIG = None
@@ -68,9 +84,9 @@ def TEST(is_test: bool):
     global __test
     global CONFIG
     if not isinstance(is_test, bool):
-        raise ValueError(_("hero.TEST must be set to a boolean value"))
+        raise ValueError("hero.TEST must be set to a boolean value")
     if isinstance(__test, bool):
-        raise RuntimeError(_("Tried to set hero.TEST when it was already set"))
+        raise RuntimeError("Tried to set hero.TEST when it was already set")
     if is_test:
         CONFIG = test_config
     else:

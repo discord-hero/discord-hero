@@ -100,6 +100,7 @@ def cached(expire_after=None, include_self=True):
             await asyncio.sleep(10)
             return 1 + 1
     """
+    # TODO check parameter for custom validity/integrity checks
     return aiocache.cached(ttl=expire_after, alias='default', noself=not include_self)
 
 

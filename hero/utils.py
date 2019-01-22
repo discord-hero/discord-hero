@@ -8,6 +8,7 @@ discord-hero: Discord Application Framework for humans
 
 import asyncio
 import collections
+import copy
 import functools
 import re
 
@@ -19,7 +20,8 @@ from discord.utils import maybe_coroutine
 from discord.errors import HTTPException, GatewayNotFound, ConnectionClosed
 
 
-def ismodelobject(obj):
+def ismodelobject(obj, model_cls=None):
+    # TODO check if model obj is instance of model_cls
     return getattr(obj, '_inited', False)
 
 
@@ -117,34 +119,14 @@ def autorestart(delay_start=None, pause=None, restart_check=None):
     return wrapper
 
 
-def cached(timeout=None, validity_check=None):
-    """Utility function for creating a decorator that caches the return value
-    of the decorated function or coroutine.
+def merge_configs(default, overwrite):
+    """From `cookiecutter <https://github.com/audreyr/cookiecutter>`__"""
+    new_config = copy.deepcopy(default)
 
-    :param int timeout:
-        How long the returned value of the decorated function or
-        coroutine should stay in the cache before it is discarded.
-    :param Optional[Callable] validity_check:
-        Callable, should return True if cached value is still valid, else None.
-        Takes the ``cached_value`` that was originally returned by the decorated function.
-    :return:
-        A decorator to decorate a function with for its return value to be cached
-        with the given ``timeout`` and ``validity_check``.
+    for key, value in overwrite.items():
+        if isinstance(value, dict):
+            new_config[key] = merge_configs(default[key], value)
+        else:
+            new_config[key] = value
 
-    Example: ::
-
-        @cached(timeout=1800)
-        async def expensive_coroutine():
-            # highly complicated and expensive calculation
-            await asyncio.sleep(10)
-            return 1 + 1
-    """
-    def wrapper(_func):
-        """Wraps the function"""
-        @functools.wraps(_func)
-        def wrapped(func):
-            """Actual decorator"""
-            # TODO
-            pass
-        return wrapped
-    return wrapper
+    return new_config
