@@ -3,7 +3,7 @@ discord-hero
 
 discord-hero (or d-hero for short) is an **asynchronous, fully modular
 web application framework for humans** allowing you to write
-applications that connect to `Discord <https://discordapp.com/>`__. It
+applications that connect to `Discord <https://discordapp.com/>`_. It
 is intended for:
 
 -  developers interested in an **easy way to develop a powerful public
@@ -139,9 +139,7 @@ simply classes that inherit from ``hero.Cog``. By inheriting from
 unless the extension it belongs to is disabled. A cog that is added to
 the core can be accessed via the core’s attributes. The name of the cog
 attribute of the core is the ``snake_case``\ ’d version of the cog’s
-class name.
-
-::
+class name. ::
 
    import hero
 
@@ -154,9 +152,7 @@ Commands
 ~~~~~~~~
 
 Decorate a ``Cog``\ ’s coroutine method with ``hero.command(**options)``
-to create a ``Command``.
-
-::
+to create a ``Command``. ::
 
    @hero.command()
    @hero.guild_only()  # A check ensuring that the command can only be invoked on a Discord server (Guild)
@@ -226,11 +222,9 @@ Legal stuff
 -----------
 
 Except as otherwise noted, discord-hero is licensed under the Apache
-License, Version 2.0
-(`LICENSE.Apache-2.0 <LICENSE.Apache-2.0>`__ or
-`<http://www.apache.org/licenses/LICENSE-2.0>`__)
-or the MIT license `LICENSE.MIT <LICENSE.MIT>`__
-or `<http://opensource.org/licenses/MIT>`__,
-at your option.
+License, Version 2.0 (`<LICENSE.Apache-2.0>`__ or
+`<http://www.apache.org/licenses/LICENSE-2.0>`__) or
+the MIT license `<LICENSE.MIT>`__ or
+`<http://opensource.org/licenses/MIT>`__, at your option.
 
 SPDX-License-Identifier: Apache-2.0 OR MIT

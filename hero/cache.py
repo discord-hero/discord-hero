@@ -4,8 +4,7 @@
 :license: Apache-2.0 OR MIT
 """
 
-
-import typing
+from typing import Optional
 
 import aiocache
 
@@ -69,7 +68,7 @@ class Cache:
             self.loop = loop
 
 
-def cached(expire_after=None, include_self=True):
+def cached(expire_after=None, key=None, include_self=True):
     """Creates a decorator that caches the return value of the
     decorated function or method.
 
@@ -84,13 +83,16 @@ def cached(expire_after=None, include_self=True):
         been cached. The default is ``None``, which means the
         cached return value does never expire and will not be
         discarded.
-    :type expire_after: typing.Optional[int]
+    :type expire_after: Optional[int]
+    :param key:
+        The custom key to save the cached return value in.
+        :type key: Optional[str]
     :param include_self:
         Whether or not ``self`` should be included when checking
         whether or not the parameters passed to the decorated
         function are equal to ones that were passed to the
         function before.
-    :type include_self: typing.Optional[bool]
+    :type include_self: Optional[bool]
 
     Example: ::
 
@@ -101,7 +103,7 @@ def cached(expire_after=None, include_self=True):
             return 1 + 1
     """
     # TODO check parameter for custom validity/integrity checks
-    return aiocache.cached(ttl=expire_after, alias='default', noself=not include_self)
+    return aiocache.cached(key=key, ttl=expire_after, alias='default', noself=not include_self)
 
 
 def init():
@@ -110,7 +112,10 @@ def init():
         _cache_config = {
             'default': {
                 'cache': 'aiocache.SimpleMemoryCache',
-                'namespace': 'hero'
+                'namespace': 'hero',
+                'serializer': {
+                    'class': 'aiocache.serializers.PickleSerializer'
+                }
             }
         }
     elif hero.CONFIG['cache']['backend'] == 'redis':
@@ -126,11 +131,7 @@ def init():
                 'pool_max_size': hero.CONFIG['cache'].get('pool_max_size', 10),
                 'serializer': {
                     'class': 'aiocache.serializers.PickleSerializer'
-                },
-                'plugins': [
-                    {'class': 'aiocache.plugins.HitMissRatioPlugin'},
-                    {'class': 'aiocache.plugins.TimingPlugin'}
-                ]
+                }
             }
         }
     else:

@@ -5,14 +5,14 @@
 """
 
 
-from typing import Union
+from typing import Type, Union
 
 import discord
 
 from tortoise.fields import (BigIntField, BooleanField, CharField, CASCADE,
                              DateField, DatetimeField, DecimalField, FloatField,
-                             ForeignKeyField, IntField, JSONField,
-                             RESTRICT, SET_DEFAULT, SET_NULL,
+                             ForeignKeyField as _ForeignKeyField, IntField,
+                             JSONField, RESTRICT, SET_DEFAULT, SET_NULL,
                              SmallIntField, TextField, TimeDeltaField)
 
 import hero
@@ -20,12 +20,22 @@ from . import db
 from .i18n import Languages
 
 
-class DiscordField(BigIntField):
+class ForeignKeyField(_ForeignKeyField):
+    def __init__(self, model: Type[hero.Model], *args, **kwargs):
+        if issubclass(model, hero.Model):
+            model_name = '.'.join((model._meta.app, model.__name__))
+        else:
+            raise TypeError("model must be a subclass of hero.Model")
+        super(ForeignKeyField, self).__init__(model_name, *args, **kwargs)
+
+
+class DiscordField(ForeignKeyField):
     _discord_cls = None
     _discord_obj = None
 
     def __init__(self, *args, **kwargs):
-        super(DiscordField, self).__init__(*args, **kwargs)
+        super(DiscordField, self).__init__(db.hero_model_map[self._discord_cls],
+                                           *args, **kwargs)
 
     def to_db_value(self, value: Union[hero.Object, db.discord_models, db.hero_models],
                     instance):

@@ -26,6 +26,10 @@ class Cog:
 
     @property
     def qualified_name(self):
-        return f'{self.extension}.{self.name}'
+        return f'{self.extension.name}.{self.name}'
+    
+    @property
+    def settings(self):
+        return self.extension.settings
 
 

@@ -28,6 +28,7 @@ requirements = [
     "libsass",
     "aiofiles",
     "toml",
+    "cookiecutter",
     "uvloop; sys_platform != 'win32'",
 ]
 
@@ -42,9 +43,9 @@ extra_requirements = {
     'redis:python_version<"3.7"': ['aioredis>=0.3.3'],
     'redis:python_version>="3.7"': ['aioredis>=1.0.0'],
     'memcached': ['aiomcache>=0.5.2'],
-    'msgpack': ['msgpack>=0.5.5'],
     'postgresql': ['asyncpg'],
-    'mysql': ['aiomysql']
+    'mysql': ['aiomysql'],
+    'voice': ['pynacl']  # TODO check if this is correct
 }
 
 with open(os.path.join(here, 'hero', '__init__.py')) as f:
