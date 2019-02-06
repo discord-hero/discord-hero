@@ -26,12 +26,9 @@ applications for communities, games or companies on Discord:
 -  a **GraphQL API** powered by
    `Graphene <https://graphene-python.org/>`_ via
    `Responder <https://python-responder.org/>`_
--  a **web frontend** backed by
-   `WhiteNoise <http://whitenoise.evans.io/>`_,
-   `Starlette <https://www.starlette.io/>`_ and
-   `Jinja2 <http://jinja.pocoo.org/>`_ (also via Responder), written
-   with `Vue <https://vuejs.org/>`_ and `Bulma <https://bulma.io/>`_
-   via `Buefy <https://buefy.github.io/>`_
+-  a **web frontend** written with `Vue <https://vuejs.org/>`_
+   and `Vuetify <https://vuetifyjs.com/>`_
+   via `Nuxt <https://nuxtjs.org/>`_
 -  a **familiar asynchronous ORM** heavily based on
    `tortoise-orm <https://github.com/tortoise/tortoise-orm>`_
 -  an **easy-to-use cache system**, optionally powered by Redis, via
@@ -47,7 +44,7 @@ to be entered in a terminal / command prompt.
 Requirements
 ~~~~~~~~~~~~
 
-You need `Python 3.6 <https://www.python.org/downloads/>`_ or above,
+You need `Python 3.6 or above <https://www.python.org/downloads/>`_,
 `Git <https://git-scm.com/downloads>`_, ``cookiecutter`` and ``pipenv``.
 On Windows you may also need the
 `Visual C++ Build Tools <https://visualstudio.microsoft.com/visual-cpp-build-tools/>`_.

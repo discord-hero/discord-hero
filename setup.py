@@ -16,7 +16,7 @@ with open(os.path.join(here, 'README.rst')) as readme_file:
 
 python_requirement = '>=3.6.0'
 
-discordpy_version = '7f4c57dd5ad20b7fa10aea485f674a4bc24b9547'
+discordpy_version = '700dbb5555f7edd5a1fa8915d606495439b24ee3'
 
 requirements = [
     "responder",
@@ -86,7 +86,7 @@ class PublishCommand(Command):
             pass
 
         self.status('Building Source and Wheel (universal) distribution...')
-        os.system('{0} setup.py sdist bdist_wheel --universal'.format(sys.executable))
+        os.system('{0} setup.py sdist bdist_wheel'.format(sys.executable))
 
         self.status('Uploading the package to PyPI via Twine...')
         os.system('twine upload dist/*')
@@ -112,7 +112,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: JavaScript',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Topic :: Communications :: Chat',
@@ -137,7 +137,7 @@ setup(
     install_requires=requirements,
     license="Apache-2.0 OR MIT",
     long_description=readme,
-    long_description_content_type='text/rst',
+    long_description_content_type='text/x-rst',
     include_package_data=True,
     keywords='discord bot framework',  # TODO
     name='discord-hero',

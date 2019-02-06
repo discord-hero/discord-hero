@@ -13,10 +13,18 @@ import os
 import re
 
 ROOT_DIR = os.getcwd()
+"""str: The root directory of the running application.
+Use in conjunction with ``os.path.join``.
+"""
 
-from . import i18n
+LIB_ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+"""str: The root directory of the discord-hero library.
+Use in conjunction with ``os.path.join``.
+"""
 
-builtins._ = i18n.translate
+from .i18n import translate
+
+builtins._ = translate
 
 from discord.ext.commands import command, check, cooldown
 
@@ -28,6 +36,8 @@ from .conf import Extension, production_config, test_config
 from .db import Database, Object
 from .models import (AbstractSettings, User, Guild, TextChannel, VoiceChannel,
                      Role, Emoji, Member, Message)
+from .perms import (Permission, BotPermissions, BotPermissionsEnum,
+                    ApiPermissions, ApiPermissionsEnum)
 from .cache import cached, get_cache
 
 
