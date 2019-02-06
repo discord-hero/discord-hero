@@ -12,7 +12,7 @@ import sys
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-with codecs.open(os.path.join(here, 'README.rst', encoding='utf-8')) as readme_file:
+with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
 python_requirement = '>=3.6.0'
@@ -48,7 +48,7 @@ extra_requirements = {
     'voice': ['pynacl']
 }
 
-with codecs.open(os.path.join(here, 'hero', '__init__.py', encoding='utf-8')) as f:
+with codecs.open(os.path.join(here, 'hero', '__init__.py'), encoding='utf-8') as f:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
                         f.read(), re.MULTILINE).group(1)
 
