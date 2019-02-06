@@ -218,6 +218,8 @@ permissions, you can use the web interface. You can still add custom
 Legal stuff
 -----------
 
+Discord is a trademark of Discord, Inc.
+
 Except as otherwise noted, discord-hero is licensed under the Apache
 License, Version 2.0 (`<LICENSE.Apache-2.0>`__ or
 `<http://www.apache.org/licenses/LICENSE-2.0>`__) or

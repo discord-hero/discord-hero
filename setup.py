@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import codecs
 import os
 import re
 from setuptools import find_packages, setup, Command
@@ -11,7 +12,7 @@ import sys
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-with open(os.path.join(here, 'README.rst')) as readme_file:
+with codecs.open(os.path.join(here, 'README.rst', encoding='utf-8')) as readme_file:
     readme = readme_file.read()
 
 python_requirement = '>=3.6.0'
@@ -25,7 +26,6 @@ requirements = [
     "graphene",
     "click",
     "aiologger",
-    "libsass",
     "aiofiles",
     "toml",
     "cookiecutter",
@@ -45,10 +45,10 @@ extra_requirements = {
     'memcached': ['aiomcache>=0.5.2'],
     'postgresql': ['asyncpg'],
     'mysql': ['aiomysql'],
-    'voice': ['pynacl']  # TODO check if this is correct
+    'voice': ['pynacl']
 }
 
-with open(os.path.join(here, 'hero', '__init__.py')) as f:
+with codecs.open(os.path.join(here, 'hero', '__init__.py', encoding='utf-8')) as f:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
                         f.read(), re.MULTILINE).group(1)
 
@@ -58,11 +58,6 @@ class PublishCommand(Command):
 
     description = 'Build and publish the package.'
     user_options = []
-
-    @staticmethod
-    def status(s):
-        """Prints things in bold."""
-        print('\033[1m{0}\033[0m'.format(s))
 
     def initialize_options(self):
         pass
@@ -80,15 +75,15 @@ class PublishCommand(Command):
                 raise exc_info[0](exc_info[1])
 
         try:
-            self.status('Removing previous builds…')
+            print('Removing previous builds…')
             rmtree(os.path.join(here, 'dist'), onerror=onerror)
         except (OSError, FileNotFoundError):
             pass
 
-        self.status('Building Source and Wheel (universal) distribution...')
+        print('Building Source and Wheel distribution...')
         os.system('{0} setup.py sdist bdist_wheel'.format(sys.executable))
 
-        self.status('Uploading the package to PyPI via Twine...')
+        print('Uploading the package to PyPI via Twine...')
         os.system('twine upload dist/*')
 
         sys.exit()
@@ -139,7 +134,7 @@ setup(
     long_description=readme,
     long_description_content_type='text/x-rst',
     include_package_data=True,
-    keywords='discord bot framework',  # TODO
+    keywords='discord bot framework',
     name='discord-hero',
     packages=find_packages(include=['hero']),
     python_requires=python_requirement,
