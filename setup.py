@@ -15,7 +15,7 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
-python_requirement = '>=3.6.0'
+python_requirement = '>= 3.6.0'
 
 discordpy_version = '700dbb5555f7edd5a1fa8915d606495439b24ee3'
 
@@ -29,7 +29,7 @@ requirements = [
     "aiofiles",
     "toml",
     "cookiecutter",
-    "uvloop; sys_platform != 'win32'",
+    "uvloop; sys_platform != 'win32' and implementation_name == 'cpython",
 ]
 
 test_requirements = [
