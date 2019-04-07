@@ -4,13 +4,13 @@
 :license: Apache-2.0 OR MIT
 """
 
+import time
 from typing import Union
 
 import tortoise
 
 import hero
 from hero import db, fields, logging
-from .i18n import Languages
 
 
 class Model(tortoise.models.Model):
@@ -19,6 +19,9 @@ class Model(tortoise.models.Model):
 
     @property
     def _core(self):
+        """The :class:`Core`. Should only be accessed from within the
+        model class itself.
+        """
         return self._meta.db.core
 
     @property
@@ -33,14 +36,14 @@ class AbstractSettings(Model):
         abstract = True
 
     async def setdefault(self):
-        # TODO
+        # TODO implement dict-like API
         pass
 
 
 class CoreSettings(AbstractSettings):
     name = fields.CharField(pk=True, max_length=64)
     token = fields.CharField(max_length=64)
-    lang = fields.LanguageField(default=Languages.default.value)
+    lang = fields.LanguageField()
 
     @property
     def logging_level(self):
@@ -99,8 +102,7 @@ class DiscordModel(Model):
         return super().get(*args, **kwargs)
 
     async def load(self):
-        # TODO
-        pass
+        await self.fetch_fields()
 
     async def connect(self, discord_obj: Union[db.discord_models]=None):
         # TODO
@@ -109,22 +111,18 @@ class DiscordModel(Model):
     @property
     def is_loaded(self):
         # TODO
-        pass
+        return False
 
     @property
     def is_connected(self):
         return self._discord_obj is not None
 
-    async def translate(self, s: str):
-        return self._core.translate(s, self.lang)
+    def __getattr__(self, name):
+        if hasattr(self._discord_obj, name):
+            return getattr(self._discord_obj, name)
 
-    @property
-    def t(self):
-        return self.translate
-
-    def __getattr__(self, attr_name):
-        if hasattr(self._discord_obj, attr_name):
-            return getattr(self._discord_obj, attr_name)
+    def __dir__(self):
+        tmp = super(DiscordModel, self).__dir__()
 
     def __str__(self):
         if self.is_connected:
@@ -142,24 +140,46 @@ class DiscordModel(Model):
         return self.id
 
 
+USER_ACCESS_CACHE_KEY = "{user.id}_{queried_field}_{method}"
+
+
 class User(DiscordModel):
-    is_staff = fields.BooleanField(default=False, db_index=True)
-    command_count = fields.IntField(default=0)
-    is_active = fields.BooleanField(default=True, db_index=True)
-    lang = fields.LanguageField(default=Languages.default.value)
+    is_staff = fields.BooleanField(default=False, index=True)
+    is_active = fields.BooleanField(default=True, index=True)
+    lang = fields.LanguageField()
     prefers_dm = fields.BooleanField(default=False)
     # TODO when user wants to delete their data, delete user,
     # let the DB cascade, and create a new user with is_active=False
+
+    async def get_all_groups(self):
+        # TODO
+        pass
+
+    async def get_last_access(self, queried_field: str, method: hero.perms.Methods):
+        """Returns when the queried_field was last accessed with the specified method"""
+        cache = hero.get_cache()
+        key = USER_ACCESS_CACHE_KEY.format(user=self,
+                                           queried_field=queried_field,
+                                           method=method)
+        return await cache.get(key, default=0)
+
+    async def register_access(self, queried_field: str, method: hero.perms.Methods):
+        """Returns when the queried_field was last accessed with the specified method to now"""
+        cache = hero.get_cache()
+        key = USER_ACCESS_CACHE_KEY.format(user=self,
+                                           queried_field=queried_field,
+                                           method=method)
+        return await cache.set(key, time.time())
 
 
 class Guild(DiscordModel):
     # TODO normalize Guild
     register_time = fields.DatetimeField(auto_now_add=True)
-    invite_code = fields.CharField(max_length=64, db_index=True)
+    invite_code = fields.CharField(max_length=64, index=True)
     url = fields.CharField(max_length=256, unique=True)
     is_deleted = fields.BooleanField(default=False)
     prefix = fields.CharField(max_length=64)
-    lang = fields.LanguageField(default=Languages.default.value)
+    lang = fields.LanguageField()
     members = fields.ManyUsersField('hero.User', through='hero.Member',
                                     forward_key='user', backward_key='guild',
                                     related_name='guilds')
@@ -183,7 +203,7 @@ class Guild(DiscordModel):
 
 class TextChannel(DiscordModel):
     guild = fields.GuildField(on_delete=fields.CASCADE)
-    lang = fields.LanguageField(default=Languages.default.value)
+    lang = fields.LanguageField()
 
 
 class VoiceChannel(DiscordModel):
@@ -204,18 +224,18 @@ class Member(DiscordModel):
     user = fields.UserField(pk=True, on_delete=fields.CASCADE)
     guild = fields.GuildField(pk=True, on_delete=fields.CASCADE)
 
-    def __getattribute__(self, item):
-        if item == 'id':
+    def __getattribute__(self, name):
+        if name == 'id':
             _discord_obj = getattr(self, '_discord_obj', None)
             if _discord_obj is not None:
                 return self._discord_obj.id
-        return super().__getattribute__(item)
+        return super().__getattribute__(name)
 
 
 class Message(DiscordModel):
-    channel = fields.TextChannelField(db_index=True, on_delete=fields.CASCADE)
-    author = fields.UserField(db_index=True, on_delete=fields.CASCADE)
-    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
+    channel = fields.TextChannelField(index=True, on_delete=fields.CASCADE)
+    author = fields.UserField(index=True, on_delete=fields.CASCADE)
+    guild = fields.GuildField(index=True, on_delete=fields.CASCADE)
 
 
 class UserGroup(Model):
@@ -223,8 +243,5 @@ class UserGroup(Model):
 
 
 class UserGroupMember(Model):
-    group = fields.ForeignKeyField('hero.group', db_index=True)
-    user = fields.UserField(db_index=True, on_delete=fields.CASCADE)
-
-
-# TODO figure out a way to migrate DB models automatically
+    group = fields.ForeignKeyField(UserGroup, index=True)
+    user = fields.UserField(index=True, on_delete=fields.CASCADE)

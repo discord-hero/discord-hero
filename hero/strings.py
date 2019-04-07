@@ -1,5 +1,3 @@
-"""Externalized strings for better structure and easier localization"""
-
 setup_greeting = """discord-hero - First run configuration
 
 Insert your bot's token, or enter 'cancel' to cancel the setup:"""

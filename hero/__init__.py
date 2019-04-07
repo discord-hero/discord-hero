@@ -28,6 +28,8 @@ builtins._ = translate
 
 from discord.ext.commands import command, check, cooldown
 
+from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
+
 from .models import Model
 from .utils import namedtuple_with_defaults as namedtuple
 from .core import Core
@@ -36,14 +38,12 @@ from .conf import Extension, production_config, test_config
 from .db import Database, Object
 from .models import (AbstractSettings, User, Guild, TextChannel, VoiceChannel,
                      Role, Emoji, Member, Message)
-from .perms import (Permission, BotPermissions, BotPermissionsEnum,
-                    ApiPermissions, ApiPermissionsEnum)
+from .perms import (BotPermission, BotPermissions, BotPermissionsEnum,
+                    ApiPermission, ApiPermissions, ApiPermissionsEnum)
 from .cache import cached, get_cache
 
 
-__all__ = ['ROOT_DIR', 'Model', 'Core', 'Cog', 'Extension', 'Database', 'Object',
-           'User', 'Guild', 'TextChannel', 'VoiceChannel', 'Role', 'Emoji',
-           'Member', 'Message', 'cached', 'get_cache', 'CONFIG', 'TEST']
+__all__ = ['ROOT_DIR', 'DoesNotExist', 'MultipleObjectsReturned', 'Model', 'Core', 'Cog', 'Extension', 'Database', 'Object', 'AbstractSettings', 'User', 'Guild', 'TextChannel', 'VoiceChannel', 'Role', 'Emoji', 'Member', 'Message', 'BotPermission', 'BotPermissions', 'BotPermissionsEnum', 'ApiPermission', 'ApiPermissions', 'ApiPermissionsEnum', 'cached', 'get_cache', 'CONFIG', 'TEST']
 
 
 __title__ = 'discord-hero'

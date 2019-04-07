@@ -4,7 +4,6 @@
 :license: Apache-2.0 OR MIT
 """
 
-
 import enum
 from typing import Union
 
@@ -126,3 +125,6 @@ def init(core: hero.Core):
         pass  # TODO
     Tortoise.get_connection('default')
     Tortoise.init(config=_db_config)
+
+
+# TODO figure out a way to migrate DB models automatically

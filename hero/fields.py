@@ -4,15 +4,15 @@
 :license: Apache-2.0 OR MIT
 """
 
-
-from typing import Type, Union
+from typing import Type
 
 import discord
 
 from tortoise.fields import (BigIntField, BooleanField, CharField, CASCADE,
                              DateField, DatetimeField, DecimalField, FloatField,
                              ForeignKeyField as _ForeignKeyField, IntField,
-                             JSONField, RESTRICT, SET_DEFAULT, SET_NULL,
+                             JSONField, ManyToManyField as _ManyToManyField,
+                             RESTRICT, SET_DEFAULT, SET_NULL,
                              SmallIntField, TextField, TimeDeltaField)
 
 import hero
@@ -29,6 +29,15 @@ class ForeignKeyField(_ForeignKeyField):
         super(ForeignKeyField, self).__init__(model_name, *args, **kwargs)
 
 
+class ManyToManyField(_ManyToManyField):
+    def __init__(self, model: Type[hero.Model], *args, **kwargs):
+        if issubclass(model, hero.Model):
+            model_name = '.'.join((model._meta.app, model.__name__))
+        else:
+            raise TypeError("model must be a subclass of hero.Model")
+        super(ManyToManyField, self).__init__(model_name, *args, **kwargs)
+
+
 class DiscordField(ForeignKeyField):
     _discord_cls = None
     _discord_obj = None
@@ -36,20 +45,6 @@ class DiscordField(ForeignKeyField):
     def __init__(self, *args, **kwargs):
         super(DiscordField, self).__init__(db.hero_model_map[self._discord_cls],
                                            *args, **kwargs)
-
-    def to_db_value(self, value: Union[hero.Object, db.discord_models, db.hero_models],
-                    instance):
-        if not isinstance(value, (hero.Object,) + db.discord_models + db.hero_models):
-            raise TypeError("value needs to be a hero.Object, "
-                            "a discord object or a hero object")
-        return value.id
-
-    def to_python_value(self, value: int):
-        if self._discord_obj is not None:
-            cls = db.discord_model_map[self._discord_cls]
-            return cls.from_discord_obj(self._discord_obj)
-        else:
-            return hero.Object(value, self)
 
 
 class UserField(DiscordField):
@@ -84,9 +79,51 @@ class MessageField(DiscordField):
     _discord_cls = discord.Message
 
 
+class ManyDiscordField(ManyToManyField):
+    _discord_cls = None
+    _discord_obj = None
+
+    def __init__(self, *args, **kwargs):
+        super(ManyDiscordField, self).__init__(db.hero_model_map[self._discord_cls],
+                                               *args, **kwargs)
+
+
+class ManyUsersField(ManyDiscordField):
+    _discord_cls = discord.User
+
+
+class ManyGuildsField(ManyDiscordField):
+    _discord_cls = discord.Guild
+
+
+class ManyTextChannelsField(ManyDiscordField):
+    _discord_cls = discord.TextChannel
+
+
+class ManyVoiceChannelsField(ManyDiscordField):
+    _discord_cls = discord.VoiceChannel
+
+
+class ManyRolesField(ManyDiscordField):
+    _discord_cls = discord.Role
+
+
+class ManyEmojisField(ManyDiscordField):
+    _discord_cls = discord.Emoji
+
+
+class ManyMembersField(ManyDiscordField):
+    _discord_cls = discord.Member
+
+
+class ManyMessagesField(ManyDiscordField):
+    _discord_cls = discord.Message
+
+
 class LanguageField(CharField):
     def __init__(self, **kwargs):
         kwargs['max_length'] = 16
+        kwargs['default'] = Languages.default
         super().__init__(**kwargs)
 
     def to_db_value(self, value: Languages, instance) -> str:

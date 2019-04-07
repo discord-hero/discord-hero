@@ -4,7 +4,6 @@
 :license: Apache-2.0 OR MIT
 """
 
-
 import click
 from click import argument, option
 

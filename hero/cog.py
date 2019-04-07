@@ -4,7 +4,6 @@
 :license: Apache-2.0 OR MIT
 """
 
-
 import hero
 from hero import logging, get_cache, utils
 
@@ -27,7 +26,7 @@ class Cog:
     @property
     def qualified_name(self):
         return f'{self.extension.name}.{self.name}'
-    
+
     @property
     def settings(self):
         return self.extension.settings
