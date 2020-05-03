@@ -4,11 +4,12 @@ discord-hero
 
 Discord Application Framework for humans
 
-:copyright: (c) 2019 monospacedmagic et al.
+:copyright: (c) 2019-2020 monospacedmagic et al.
 :license: Apache-2.0 OR MIT
 """
 
 import builtins
+from collections import namedtuple
 import os
 import re
 
@@ -28,30 +29,25 @@ builtins._ = translate
 
 from discord.ext.commands import command, check, cooldown
 
-from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
-
-from .models import Model
-from .utils import namedtuple_with_defaults as namedtuple
-from .core import Core
+from .utils import async_using_db
+from .conf import Config, Extension
+from .db import Database
 from .cog import Cog
-from .conf import Extension, production_config, test_config
-from .db import Database, Object
-from .models import (AbstractSettings, User, Guild, TextChannel, VoiceChannel,
-                     Role, Emoji, Member, Message)
-from .perms import (BotPermission, BotPermissions, BotPermissionsEnum,
-                    ApiPermission, ApiPermissions, ApiPermissionsEnum)
+from .controller import Controller
+# from .perms import (BotPermission, BotPermissions, BotPermissionsEnum)
 from .cache import cached, get_cache
+from .core import Core
 
 
-__all__ = ['ROOT_DIR', 'DoesNotExist', 'MultipleObjectsReturned', 'Model', 'Core', 'Cog', 'Extension', 'Database', 'Object', 'AbstractSettings', 'User', 'Guild', 'TextChannel', 'VoiceChannel', 'Role', 'Emoji', 'Member', 'Message', 'BotPermission', 'BotPermissions', 'BotPermissionsEnum', 'ApiPermission', 'ApiPermissions', 'ApiPermissionsEnum', 'cached', 'get_cache', 'CONFIG', 'TEST']
-
+__all__ = ['ROOT_DIR', 'Core', 'Cog', 'Extension', 'VERSION', 'VersionInfo', 'TEST']
 
 __title__ = 'discord-hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019 monospacedmagic et al.'
-__version__ = '0.1.0'
+__version__ = '0.1.0-alpha'
 __is_release__ = False
+
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial',
                          defaults=(0,) * 5)
@@ -70,34 +66,10 @@ version_pattern = re.compile(
     # serial
     r'?(?:'
     r'\.(0|[1-9]\d*|\d*[A-Za-z][\dA-Za-z]*))*'
-    r')'
 )
 
-VERSION = VersionInfo(*re.match(version_pattern, __version__))
-
-CONFIG = None
+VERSION = VersionInfo(*re.match(version_pattern, __version__).groups())
 
 LANGUAGE = i18n.Languages.default
 
-__test = None
-
-
-@property
-def TEST():
-    return __test
-
-
-@TEST.setter
-def TEST(is_test: bool):
-    global __test
-    global CONFIG
-    if not isinstance(is_test, bool):
-        raise ValueError("hero.TEST must be set to a boolean value")
-    if __test is not None:
-        raise RuntimeError("Tried to set hero.TEST when it was already set")
-    # TODO use read-only mapping view
-    if is_test:
-        CONFIG = test_config
-    else:
-        CONFIG = production_config
-    __test = is_test
+TEST = None

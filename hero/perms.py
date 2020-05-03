@@ -1,6 +1,6 @@
 """discord-hero: Discord Application Framework for humans
 
-:copyright: (c) 2019 monospacedmagic et al.
+:copyright: (c) 2019-2020 monospacedmagic et al.
 :license: Apache-2.0 OR MIT
 """
 
@@ -8,26 +8,11 @@ import abc
 import enum
 from typing import Union
 
-import hero
-
-
-class RateLimit:
-    def __init__(self, times: int, per_seconds: int):
-        self.times = times
-        self.per_seconds = per_seconds
-
-
-class Methods(enum.Enum):
-    GET = 'get'
-    LIST = 'list'
-    SET = 'set'
-    CREATE = 'create'
-    EDIT = 'edit'
-    DELETE = 'delete'
+from hero.models import User, Member
 
 
 class Group(abc.ABC):
-    def __call__(self, user: Union[hero.User, hero.Member]):
+    def __call__(self, user: Union[User, Member]):
         return self.check(user)
 
     @property
@@ -35,7 +20,7 @@ class Group(abc.ABC):
         return
 
     @abc.abstractmethod
-    def check(self, user: Union[hero.User, hero.Member]):
+    def check(self, user: Union[User, Member]):
         raise NotImplementedError
 
 
@@ -43,10 +28,10 @@ class JoinedGroup:
     def __init__(self, *groups):
         self.groups = groups
 
-    def any(self, user: Union[hero.User, hero.Member]):
+    def any(self, user: Union[User, Member]):
         return any((group.check(user) for group in self.groups))
 
-    def all(self, user: Union[hero.User, hero.Member]):
+    def all(self, user: Union[User, Member]):
         return all((group.check(user) for group in self.groups))
 
 
@@ -68,12 +53,12 @@ class Groups(enum.Enum):
         return None
 
     @classmethod
-    def any(cls, user: Union[hero.User, hero.Member], *groups):
+    def any(cls, user: Union[User, Member], *groups):
         joined_group = JoinedGroup(groups)
         return joined_group.any(user), joined_group
 
     @classmethod
-    def all(cls, user: Union[hero.User, hero.Member], *groups):
+    def all(cls, user: Union[User, Member], *groups):
         joined_group = JoinedGroup(groups)
         return joined_group.all(user), joined_group
 

@@ -2,17 +2,18 @@
 
 discord-hero: Discord Application Framework for humans
 
-:copyright: (c) 2019 monospacedmagic et al.
+:copyright: (c) 2019-2020 monospacedmagic et al.
 :license: Apache-2.0 OR MIT
 """
 
 import asyncio
-import collections
 import copy
 import functools
 import re
 
 import aiohttp
+
+from asgiref.sync import SyncToAsync
 
 import websockets
 
@@ -22,7 +23,9 @@ from discord.errors import HTTPException, GatewayNotFound, ConnectionClosed
 
 def ismodelobject(obj, model_cls=None):
     # TODO check if model obj is instance of model_cls
-    return getattr(obj, '_inited', False)
+    if model_cls is not None:
+        return isinstance(obj, model_cls)
+    return hasattr(obj, '_meta')
 
 
 def snakecaseify(s: str):
@@ -30,16 +33,6 @@ def snakecaseify(s: str):
     s = re.sub(r"([a-z\d])([A-Z])", r'\1_\2', s)
     s = s.replace("-", "_")
     return s.lower()
-
-
-def namedtuple_with_defaults(typename, field_names, *, rename=False, defaults=None, module=None):
-    # backport from Python 3.7
-    T = collections.namedtuple(typename, field_names, rename=rename, module=module)
-    if defaults is not None:
-        T.__new__.__defaults__ = (None,) * len(T._fields)
-        prototype = T(*defaults)
-        T.__new__.__defaults__ = tuple(prototype)
-    return T
 
 
 def estimate_reading_time(text):
@@ -117,6 +110,29 @@ def autorestart(delay_start=None, pause=None, restart_check=None):
         return wrapped
 
     return wrapper
+
+
+# somehow asgiref messed up their class decorators??? so this is necessary
+class SyncToAsyncThreadSafe(SyncToAsync):
+    def __init__(self, func):
+        super().__init__(func, thread_sensitive=True)
+
+
+sync_to_async = SyncToAsync
+sync_to_async_threadsafe = SyncToAsyncThreadSafe
+
+
+class AsyncUsingDB(SyncToAsyncThreadSafe):
+    pass
+
+
+async_using_db = AsyncUsingDB
+"""Decorate (synchronous) functions with this to turn them into async functions
+and enable database operations inside them; otherwise a SynchronousOnlyOperation
+exception would be raised by Django. Do NOT decorate an async function with this
+as that would be not only redundant but would also stop this decorator from
+working as intended.
+"""
 
 
 def merge_configs(default, overwrite):

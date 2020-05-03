@@ -1,21 +1,15 @@
 """discord-hero: Discord Application Framework for humans
 
-:copyright: (c) 2019 monospacedmagic et al.
+:copyright: (c) 2019-2020 monospacedmagic et al.
 :license: Apache-2.0 OR MIT
 """
 
-from typing import Optional
+import os
 
 import aiocache
 
 import hero
 from .errors import ConfigurationError
-
-
-if hero.CONFIG['cache'] is None:
-    _Cache = aiocache.SimpleMemoryCache
-else:
-    _Cache = aiocache.RedisCache
 
 
 def get_cache(namespace=None):
@@ -34,7 +28,7 @@ def get_cache(namespace=None):
     else:
         actual_namespace = '_'.join((base_namespace, namespace))
     _cache_config['namespace'] = actual_namespace
-    aiocache.caches.set_config({namespace: _cache_config})
+    aiocache.caches.add(namespace, _cache_config)
     return aiocache.caches.get(namespace)
 
 
@@ -107,8 +101,8 @@ def cached(expire_after=None, key=None, include_self=True):
 
 
 def init():
-    cache_config = hero.CONFIG.get('cache', None)
-    if cache_config is None or cache_config.get('backend', None) is None:
+    cache_type = os.getenv('CACHE_TYPE')
+    if cache_type == 'simple':
         _cache_config = {
             'default': {
                 'cache': 'aiocache.SimpleMemoryCache',
@@ -118,24 +112,24 @@ def init():
                 }
             }
         }
-    elif hero.CONFIG['cache']['backend'] == 'redis':
+    elif cache_type == 'redis':
         _cache_config = {
             'default': {
                 'cache': 'aiocache.RedisCache',
-                'endpoint': hero.CONFIG['cache'].get('host', '127.0.0.1'),
-                'port': hero.CONFIG['cache'].get('port', 6379),
-                'password': hero.CONFIG['cache'].get('password', None),
-                'db': hero.CONFIG['cache'].get('db', 0),
-                'namespace': hero.CONFIG['cache'].get('namespace', 'hero'),
-                'pool_min_size': hero.CONFIG['cache'].get('pool_min_size', 1),
-                'pool_max_size': hero.CONFIG['cache'].get('pool_max_size', 10),
+                'endpoint': os.getenv('CACHE_HOST'),
+                'port': os.getenv('CACHE_PORT'),
+                'password': os.getenv('CACHE_PASSWORD'),
+                'db': os.getenv('CACHE_DB'),
+                'namespace': 'hero_' + os.getenv('NAMESPACE'),
+                'pool_min_size': 1,
+                'pool_max_size': 10,
                 'serializer': {
                     'class': 'aiocache.serializers.PickleSerializer'
                 }
             }
         }
     else:
-        raise ConfigurationError(f"The configuration uses an unsupported cache backend: "
-                                 f"{hero.CONFIG['cache']['backend']}")
+        raise ConfigurationError("The configuration uses an unsupported cache backend: "
+                                 "{}".format(os.getenv('CACHE_TYPE')))
 
     aiocache.caches.set_config(_cache_config)

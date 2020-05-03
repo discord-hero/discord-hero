@@ -1,6 +1,6 @@
 """discord-hero: Discord Application Framework for humans
 
-:copyright: (c) 2019 monospacedmagic et al.
+:copyright: (c) 2019-2020 monospacedmagic et al.
 :license: Apache-2.0 OR MIT
 """
 
@@ -18,53 +18,60 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-import responder
-
 import hero
-from . import db, strings, utils
-from .models import Settings
+from . import strings
 from .conf import Extensions
 from .cache import get_cache
+from .errors import InactiveUser, UserDoesNotExist
 
 
 class CommandConflict(discord.ClientException):
     pass
 
 
-class Core(commands.Bot, responder.API):
+class Core(commands.Bot):
     """Represents Hero's Core."""
 
-    def __init__(self, name='default', loop=None):
+    def __init__(self, config, settings, name='default', loop=None):
         self.name = name
-        self.settings = Settings(name=name)
-        self.extensions = Extensions(name=name)
+        self.__extensions = Extensions(name=name)
+        self.__controllers = {}
+        self.__settings = {}
         self.cache = get_cache()
-        self.db = db.Database(self)
-        self.db_client = db.get_database_client(name=name)
-        self.db_client.core = self
-        super(Core, self).__init__(command_prefix=self.base.get_prefixes(),
-                                   loop=loop, description=self.base.get_description(),
+        # hack that allows Discord models to fetch the Discord object they belong to using the core
+        self.cache.core = self
+        self.config = config
+        self.settings = settings
+        self.settings.load()
+        super(Core, self).__init__(command_prefix=self.get_prefixes(),
+                                   loop=loop, description=self.get_description(),
                                    pm_help=None, cache_auth=False,
                                    command_not_found=strings.command_not_found,
                                    command_has_no_subcommands=strings.command_has_no_subcommands)
-        self._connection.core = self
 
-        self.create_task(self.wait_for_restart)
-        self.create_task(self.wait_for_shutdown)
-        self.tasks = {}
-        self.extra_tasks = {}
-        self._stopped = asyncio.Event(loop=self.loop)
-
-        user_agent = 'Hero (https://github.com/monospacedmagic/discord-hero {0}) Python/{1} aiohttp/{2} discord.py/{3}'
+        user_agent = 'discord-hero (https://github.com/monospacedmagic/discord-hero {0}) ' \
+                     'Python/{1} aiohttp/{2} discord.py/{3}'
         self.http.user_agent = user_agent.format(hero.__version__, sys.version.split(maxsplit=1)[0],
                                                  aiohttp.__version__, discord.__version__)
 
     def __getattr__(self, item):
-        return self.extensions.get(item, None)
+        try:
+            self.__controllers[item]
+        except KeyError:
+            raise AttributeError("'Core' object has no attribute '%s'" % item)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        try:
+            self.clear()
+        except AttributeError:
+            pass
 
     @property
     def is_configured(self):
-        return hero.CONFIG['token'] is not None
+        return self.config.bot_token is not None
 
     @property
     @hero.cached(include_self=False)
@@ -72,27 +79,7 @@ class Core(commands.Bot, responder.API):
         # TODO
         return {}
 
-    async def on_command_completion(self, ctx):
-        author = ctx.message.author
-        user = self.base.get_user(author)
-        user_already_registered = self.base.user_is_registered(user)
-        user.command_count += 1
-        user.save()
-        if not user_already_registered:
-            await author.send(strings.user_registered.format(author.name))
-
     async def on_ready(self):
-        if self.base.get_owner_id() is None:
-            await self.set_bot_owner()
-
-        restarted_from = self.base.get_restarted_from()
-        if restarted_from is not None:
-            restarted_from_messageable = discord.utils.get(self.get_all_channels(), id=restarted_from)
-            if restarted_from_messageable is None:
-                restarted_from_messageable = self.get_user(restarted_from)
-            await restarted_from_messageable.send("I'm back!")
-            self.base.reset_restarted_from()
-
         # clear terminal screen
         if os.name == 'nt':
             os.system('cls')
@@ -106,65 +93,31 @@ class Core(commands.Bot, responder.API):
         # print(strings.connected_to_servers.format(Guild.count()))
         # print(strings.connected_to_channels.format(TextChannel.count()))
         # print(strings.connected_to_users.format(User.count()))
-        print("\n{} active extensions".format(len(self.extensions)))
+        print("\n{} active extensions".format(len(self.__extensions)))
         prefix_label = strings.prefix_singular
-        if len(self.base.get_prefixes()) > 1:
+        if len(self.get_prefixes()) > 1:
             prefix_label = strings.prefix_plural
-        print("{}: {}\n".format(prefix_label, " ".join(list(self.base.get_prefixes()))))
+        print("{}: {}\n".format(prefix_label, " ".join(list(self.get_prefixes()))))
         print("------\n")
         print(strings.use_this_url)
         print(self.get_oauth_url())
         print("\n------")
-        self.base.enable_restarting()
-
-    async def logout(self):
-        await super().logout()
-        self.stop()
-
-    def stop(self):
-        def silence_gathered(future):
-            try:
-                future.result()
-            except Exception as ex:
-                traceback.print_exception(type(ex), ex, ex.__traceback__, file=sys.stderr)
-
-        # cancel lingering tasks
-        if self.tasks or self.extra_tasks:
-            tasks = set()
-            for task in self.tasks:
-                tasks.add(task)
-            for _, extra_tasks in self.extra_tasks:
-                for task in extra_tasks:
-                    tasks.add(task)
-            gathered = asyncio.gather(*tasks, loop=self.loop)
-            gathered.add_done_callback(silence_gathered)
-            gathered.cancel()
-
-        self._stopped.set()
 
     def clear(self):
-        super().clear()
-
         self.recursively_remove_all_commands()
         self.extra_events.clear()
-        self.tasks.clear()
-        self.extra_tasks.clear()
         self.cogs.clear()
-        self.extensions.clear()
+        self.__extensions.clear()
         self._stopped.clear()
         self._checks.clear()
         self._check_once.clear()
         self._before_invoke = None
         self._after_invoke = None
 
+        super().clear()
+
     def add_cog(self, cog):
         super().add_cog(cog)
-
-        members = inspect.getmembers(cog)
-        for name, member in members:
-            # register tasks the cog has
-            if name.startswith('do_'):
-                self.add_task(member, resume_check=self.base.restarting_enabled)
 
         self._resolve_groups(cog)
 
@@ -208,85 +161,6 @@ class Core(commands.Bot, responder.API):
         else:
             raise TypeError("cog_or_command must be either a cog or a command")
 
-    async def get(self, discord_cls, id: int):
-        if discord_cls not in hero.db.discord_models:
-            raise TypeError("discord_cls has to be a Discord class")
-
-        if discord_cls == discord.User:
-            # TODO
-            pass
-
-    def create_task(self, coro, *args, resume_check=None, **kwargs):
-        def actual_resume_check():
-            return resume_check() and not self.is_closed()
-
-        async def pause():
-            if not self.is_ready():
-                await asyncio.wait((self.wait_for('resumed'), self.wait_for('ready')),
-                                   loop=self.loop, return_when=asyncio.FIRST_COMPLETED)
-
-        return self.loop.create_task(utils.autorestart(pause, self.wait_until_ready,
-                                                       actual_resume_check)(coro)(*args, **kwargs))
-
-    def add_task(self, coro, name=None, unique=True, resume_check=None):
-        """The non decorator alternative to :meth:`.task`.
-
-        Parameters
-        -----------
-        coro : coroutine
-            The extra coro to register and execute in the background.
-        name : Optional[str]
-            The name of the coro to register as a task. Defaults to ``coro.__name__``.
-        unique : Optional[bool]
-            If this is ``True``, tasks with the same name that are already in
-            :attr:`extra_tasks` will not be overwritten, and the original task will
-            not be cancelled. Defaults to ``True``.
-        resume_check : Optional[predicate]
-            A predicate used to determine whether a task should be
-            cancelled on logout or restarted instead when the bot is
-            ready again. Defaults to ``None``, in which case the task
-            will be cancelled on logout.
-
-        Example
-        --------
-
-        .. code-block:: python3
-
-            async def do_stuff: pass
-            async def my_other_task(ctx): pass
-
-            bot.add_task(do_stuff)
-            bot.add_task(my_other_task, name='do_something_else', ctx=ctx)
-
-        """
-        if not asyncio.iscoroutinefunction(coro):
-            raise discord.ClientException('Tasks must be coroutines')
-
-        name = coro.__name__ if name is None else name
-
-        if name in self.extra_tasks:
-            if not unique:
-                self.extra_tasks[name].append(self.create_task(coro, resume_check))
-            else:
-                return
-        else:
-            self.extra_tasks[name] = [coro]
-
-    async def wait_for_shutdown(self):
-        await self.base.cache.subscribe('shutdown')
-
-    async def wait_for_restart(self):
-        await self.base.cache.subscribe('restart')
-
-    async def on_shutdown_message(self, _):
-        self.base.disable_restarting()
-        print("Shutting down...")
-        await self.logout()
-
-    async def on_restart_message(self, _):
-        print("Restarting...")
-        await self.logout()
-
     def load_extension(self, name):
         """Loads an extension's cog module.
 
@@ -301,11 +175,15 @@ class Core(commands.Bot, responder.API):
             The cog module could not be imported
             or didn't have any ``Cog`` subclass.
         """
+        if name in self.__extensions.loaded_by_core:
+            raise commands.ExtensionAlreadyLoaded(name)
+        try:
+            cog_module = importlib.import_module(f'extensions.{name}.cogs')
+        except ImportError:
+            cog_module = importlib.import_module(f'hero.extensions.{name}.cogs')
 
-        if name in self.extensions:
-            return None
-
-        cog_module = importlib.import_module('dwarf.' + name + '.cogs')
+        self.__controllers[name] = self.__extensions[name].get_controller(self)
+        self.__settings[name] = self.__extensions[name].get_settings(self)
 
         if hasattr(cog_module, 'setup'):
             cog_module.setup(self, name)
@@ -314,22 +192,53 @@ class Core(commands.Bot, responder.API):
                                              issubclass(member, hero.Cog) and member is not hero.Cog)
             for _, _Cog in cog_classes:
                 if _Cog is None:
-                    raise ImportError("The {} extension's cog module didn't have "
-                                      "any Cog subclass and no setup function".format(name))
-                self.add_cog(_Cog(self, name))
+                    raise ImportError(f"The {name} extension's cog module didn't have "
+                                      f"any Cog subclass and no setup function")
+                self.add_cog(_Cog(self, self.__extensions[name]))
 
-        self.extensions[name] = cog_module
+        self.__extensions.loaded_by_core.append(name)
         return cog_module
 
-    def _load_cogs(self):
-        self.load_extension('core')
+    def get_extensions(self):
+        return self.__extensions.data
 
-        core_cog = self.get_cog('Core')
-        if core_cog is None:
-            raise ImportError("Could not find the Core cog.")
+    def get_controller(self, extension_name):
+        return self.__controllers[extension_name]
+
+    def get_settings(self, extension_name):
+        return self.__settings[extension_name]
+
+    def get_prefixes(self):
+        return self.settings.prefixes
+
+    async def set_prefixes(self, prefixes):
+        old_prefixes = self.settings.prefixes
+        self.settings.prefixes = prefixes
+        try:
+            await self.settings.async_save()
+        except Exception:
+            self.settings.prefixes = old_prefixes
+            raise
+        self.command_prefix = prefixes
+
+    def get_description(self):
+        return self.settings.description
+
+    async def set_description(self, description: str):
+        self.settings.description = description
+        await self.settings.async_save()
+
+    def _load_cogs(self):
+        # discord and hero each have their own definition of an extension
+        self.__extensions.load()
+        self.load_extension('essentials')
+
+        essentials_cog = self.get_cog('Essentials')
+        if essentials_cog is None:
+            raise ImportError("Could not find the Essentials cog.")
 
         failed = []
-        extensions = self.base.get_extensions()
+        extensions = self.get_extensions()[1:]
         for extension in extensions:
             try:
                 self.load_extension(extension)
@@ -343,64 +252,7 @@ class Core(commands.Bot, responder.API):
         if failed:
             print("\nFailed to load: " + ", ".join(failed))
 
-        return core_cog
-
-    def task(self, unique=True, resume_check=None):
-        """A decorator that registers a task to execute in the background.
-
-        If a task is running when the Client disconnects from Discord
-        because it logged itself out, it will cancel the execution of the
-        task. If the Client loses the connection to Discord because
-        of network issues or similar, it will cancel the execution of the task,
-        wait for itself to reconnect, then restart the task.
-
-        Example
-        -------
-
-        ::
-
-            @bot.task()
-            async def do_say_hello_every_minute():
-                while True:
-                    print("Hello World!")
-                    await asyncio.sleep(60)
-
-        Parameters
-        ----------
-        unique : Optional[bool]
-            If this is ``True``, tasks with the same name that are
-            already sttributes of ``self`` will not be overwritten,
-            and the original task will not be cancelled.
-            Defaults to ``True``.
-        resume_check : Optional[predicate]
-            A predicate used to determine whether a task should be
-            cancelled on logout or restarted instead when the bot is
-            ready again. Defaults to ``None``, in which case the task
-            will be cancelled on logout.
-
-        Raises
-        -------
-        TypeError
-            The decorated ``coro`` is not a coroutine function.
-        """
-
-        async def wrapped(coro):
-            if not asyncio.iscoroutinefunction(coro):
-                raise TypeError('task registered must be a coroutine function')
-
-            name = coro.__name__
-            if hasattr(self, name):
-                if unique:
-                    return coro
-            setattr(self, name, self.create_task(coro, resume_check))
-
-        return wrapped
-
-    def run_tasks(self):
-        members = inspect.getmembers(self)
-        for name, member in [_member for _member in members if _member[0].startswith('do')]:
-            task = self.create_task(member)
-            self.tasks[name] = task
+        return essentials_cog
 
     async def wait_for_response(self, ctx, message_check=None, timeout=60):
         def response_check(message):
@@ -459,7 +311,7 @@ class Core(commands.Bot, responder.API):
             for page in pages:
                 await ctx.send(page)
 
-    async def on_command_error(self, ctx, error, ignore_local_handlers=False):
+    async def on_command_error(self, ctx: commands.Context, error, ignore_local_handlers=False):
         if not ignore_local_handlers:
             if hasattr(ctx.command, 'on_error'):
                 return
@@ -514,8 +366,33 @@ class Core(commands.Bot, responder.API):
             await ctx.send("You do not have permission to use this command.")
             return
 
+        # GDPR
+        from hero.models import User
+        if isinstance(error, User.DoesNotExist):
+            await ctx.send(strings.one_user_is_not_registered.format(ctx.prefix))
+            return
+
+        if isinstance(error, UserDoesNotExist):
+            if ctx.author.id == error.user_id:
+                try:
+                    await ctx.author.send(strings.user_not_registered.format(ctx.author.name, ctx.prefix))
+                except discord.Forbidden:
+                    await ctx.send(strings.user_not_registered.format(ctx.author.mention, ctx.prefix))
+            else:
+                user = self.get_user(error.user_id)
+                if user is None:
+                    user = self.fetch_user(error.user_id)
+                try:
+                    await user.send(strings.other_user_not_registered.format(ctx.author.name, ctx.prefix))
+                except discord.Forbidden:
+                    await ctx.send(strings.other_user_not_registered.format(ctx.author.mention, ctx.prefix))
+
+        if isinstance(error, InactiveUser):
+            await ctx.send(strings.one_user_is_inactive.format(error.user_id), delete_after=60)
+            return
+
         # ignore all other exception types, but print them to stderr
-        # and send it to ctx if settings.DEBUG is True
+        # and send it to ctx if in test mode
         await ctx.send("An error occured while running the command **{0}**.".format(ctx.command))
 
         if hero.TEST:
@@ -532,65 +409,18 @@ class Core(commands.Bot, responder.API):
     def get_oauth_url(self):
         return discord.utils.oauth_url(self.user.id)
 
-    async def set_bot_owner(self):
-        try:
-            data = await self.application_info()
-            self.base.set_owner_id(data.owner.id)
-        except AttributeError:
-            print(strings.update_the_api)
-            raise
-        print(strings.owner_recognized.format(data.owner.name))
-
-    async def run(self, reconnect=True):
+    def run(self, reconnect=True):
+        # self._connection.core = self
         self._load_cogs()
 
-        if self.base.get_prefixes():
-            self.command_prefix = list(self.base.get_prefixes())
+        if self.get_prefixes():
+            self.command_prefix = list(self.get_prefixes())
         else:
             print(strings.no_prefix_set)
             self.command_prefix = ["!"]
-
-        self.run_tasks()
 
         print(strings.logging_into_discord)
         print(strings.keep_updated.format(self.command_prefix[0]))
         print(strings.official_server.format(strings.invite_link))
 
-        await self.start(self.base.get_token(), reconnect=reconnect)
-
-        await self._stopped.wait()
-
-
-def main(loop=None, core=None):
-    if loop is None:
-        loop = asyncio.get_event_loop()
-
-    if core is None:
-        core = Core(loop=loop)
-
-    error = False
-    error_message = ""
-    try:
-        loop.run_until_complete(core.run())
-    except discord.LoginFailure:
-        error = True
-        error_message = 'Invalid credentials'
-        choice = input(strings.invalid_credentials)
-        if choice.strip() == 'reset':
-            core.base.delete_token()
-        else:
-            core.base.disable_restarting()
-    except KeyboardInterrupt:
-        core.base.disable_restarting()
-        loop.run_until_complete(core.logout())
-    except Exception as ex:
-        error = True
-        print(ex)
-        error_message = traceback.format_exc()
-        core.base.disable_restarting()
-        loop.run_until_complete(core.logout())
-    finally:
-        if error:
-            print(error_message)
-
-    return core
+        self.loop.run_until_complete(self.start(self.config.bot_token, bot=True, reconnect=reconnect))

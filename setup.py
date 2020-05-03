@@ -15,21 +15,18 @@ here = os.path.abspath(os.path.dirname(__file__))
 with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as readme_file:
     readme = readme_file.read()
 
-python_requirement = '>= 3.6.0'
-
-discordpy_version = '700dbb5555f7edd5a1fa8915d606495439b24ee3'
+python_requirement = '>= 3.7.0'
 
 requirements = [
-    "responder",
-    "tortoise-orm",
+    "django",
+    "discord.py",
     "aiocache",
-    "graphene",
     "click",
     "aiologger",
     "aiofiles",
-    "toml",
-    "cookiecutter",
-    "uvloop; sys_platform != 'win32' and implementation_name == 'cpython",
+    "python-dotenv",
+    "colorama",
+    "uvloop; sys_platform != 'win32' and implementation_name == 'cpython'",
 ]
 
 test_requirements = [
@@ -40,11 +37,9 @@ test_requirements = [
 setup_requirements = []
 
 extra_requirements = {
-    'redis:python_version<"3.7"': ['aioredis>=0.3.3'],
-    'redis:python_version>="3.7"': ['aioredis>=1.0.0'],
+    'redis': ['aioredis>=1.0.0'],
     'memcached': ['aiomcache>=0.5.2'],
-    'postgresql': ['asyncpg'],
-    'mysql': ['aiomysql'],
+    'postgresql': ['psycopg2'],
     'voice': ['pynacl']
 }
 
@@ -84,14 +79,14 @@ class PublishCommand(Command):
         os.system('{0} setup.py sdist bdist_wheel'.format(sys.executable))
 
         print('Uploading the package to PyPI via Twine...')
-        os.system('twine upload dist/*')
+        os.system('twine upload -r testpypi dist/*')
 
         sys.exit()
 
 
 setup(
-    author="Monospaced Magic",
-    author_email='lucina@monospacedmagic.io',
+    author="monospacedmagic",
+    author_email='luci@monospacedmagic.dev',
     classifiers=[
         'Development Status :: 3 - Alpha',
         'Environment :: Console',
@@ -108,8 +103,8 @@ setup(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Communications :: Chat',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Application Frameworks',
@@ -118,11 +113,9 @@ setup(
     cmdclass={
         'publish': PublishCommand,
     },
-    dependency_links=[
-        'http://github.com/Rapptz/discord.py/tarball/{}#egg=discord.py'.format(discordpy_version)
-    ],
+    dependency_links=[],
     description="discord-hero is an asynchronous, fully modular application framework for humans "
-                "allowing you to write applications that connect to Discord.",
+                "allowing you to write applications that connect to Discord as a bot.",
     entry_points={
         'console_scripts': [
             'hero=hero.cli:main_cli',

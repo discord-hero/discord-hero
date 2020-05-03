@@ -1,3 +1,21 @@
+"""discord-hero: Discord Application Framework for humans
+
+:copyright: (c) 2019-2020 monospacedmagic et al.
+:license: Apache-2.0 OR MIT
+"""
+
+import importlib
+
+
+class Strings:
+    def __init__(self, extension):
+        self.extension = extension
+        self.module = importlib.import_module('strings', f'hero.extensions.{extension}')
+
+    def __getattr__(self, item):
+        return getattr(self.module, item).format
+
+
 setup_greeting = """discord-hero - First run configuration
 
 Insert your bot's token, or enter 'cancel' to cancel the setup:"""
@@ -71,14 +89,31 @@ group_help = "{} command group"
 
 owner_recognized = "{} has been recognized and set as owner."
 
-user_registered = """{}, thanks for using my commands!
-I just registered you in my database so you can use all my features. I hope that's okay for you.
-If it isn't, please use the `unregister` command. That will remove all of the data I store about you.
-The only thing I will still keep is your ID so I don't forget that you don't want data about you to be stored.
-Keep in mind that if I'm not allowed to store data about you, you won't be able to use many of my commands.
-If you ever change your mind about this, use the `register` command.
+one_user_is_not_registered = "At least one user is not registered; ask them to use `{}register`."
 
-Whatever your decision looks like, I wish you lots of fun on Discord."""
+one_user_is_inactive = "At least one user, {}, has opted out of using commands and features that " \
+                       "store data related to their Discord ID, so this feature/command cannot be used " \
+                       "if it involves them."
+
+user_not_registered = """{0}, thanks for your interest in using my features!
+I noticed that you wanted to use a feature that requires me to store data \
+related to your user ID on Discord. For that I need your explicit permission \
+before you can use my commands. To allow me to store data related to your \
+user ID, please type `{1}register`. If you don't want me to store any data \
+related to your user ID, type `{1}unregister` instead. Don't worry, you can \
+always change your mind.
+
+Whatever your decision looks like, I wish you lots of fun on Discord!"""
+
+other_user_not_registered = """Hello {0}!
+I noticed that someone wanted to use a feature that requires me to store data \
+related to your user ID on Discord. For that I need your explicit permission. \
+To allow me to store data related to your \
+user ID, please type `{1}register`. If you don't want me to store any data \
+related to your user ID, type `{1}unregister` instead. Don't worry, you can \
+always change your mind.
+
+Whatever your decision looks like, I wish you lots of fun on Discord!"""
 
 failed_to_install = "Failed to install '**{}**'."
 
