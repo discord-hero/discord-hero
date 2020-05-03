@@ -79,7 +79,7 @@ class PublishCommand(Command):
         os.system('{0} setup.py sdist bdist_wheel'.format(sys.executable))
 
         print('Uploading the package to PyPI via Twine...')
-        os.system('twine upload -r testpypi dist/*')
+        os.system('twine upload dist/*')
 
         sys.exit()
 
