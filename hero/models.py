@@ -424,6 +424,37 @@ class VoiceChannel(DiscordModel):
         return discord_voice_channel
 
 
+class CategoryChannel(DiscordModel):
+    id = fields.BigIntegerField(primary_key=True)
+    guild = fields.GuildField(on_delete=fields.CASCADE)
+
+    _discord_cls = discord.CategoryChannel
+    _discord_converter_cls = converter.CategoryChannelConverter
+
+    @sync_to_async_threadsafe
+    @classmethod
+    def from_discord_obj(cls, discord_obj):
+        """Create a Hero object from a Discord object"""
+        if not isinstance(discord_obj, cls.discord_cls):
+            raise TypeError(f"discord_obj has to be a discord.{cls.discord_cls.__name__} "
+                            f"but a {type(discord_obj).__name__} was passed")
+        obj = cls(id=discord_obj.id, guild=Guild.from_discord_obj(discord_obj.guild))
+        obj._discord_obj = discord_obj
+        try:
+            obj.load()
+            existed_already = True
+        except cls.DoesNotExist:
+            existed_already = False
+        return obj, existed_already
+
+    async def fetch(self) -> discord.CategoryChannel:
+        discord_category_channel = self._core.get_channel(self.id)
+        if discord_category_channel is None:
+            discord_category_channel = await self._core.fetch_channel(self.id)
+        self._discord_obj = discord_category_channel
+        return discord_category_channel
+
+
 class Role(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
     guild = fields.GuildField(on_delete=fields.CASCADE)
@@ -507,6 +538,13 @@ class Member(DiscordModel):
                 return self._discord_obj.id
         return super().__getattr__(name)
 
+    async def fetch(self) -> discord.Member:
+        discord_member = self.guild._discord_obj.get_member(self.id)
+        if discord_member is None:
+            discord_member = await self.guild._discord_obj.fetch_member(self.id)
+        self._discord_obj = discord_member
+        return discord_member
+
     @sync_to_async_threadsafe
     @classmethod
     def from_discord_obj(cls, discord_obj):
@@ -555,6 +593,13 @@ class Message(DiscordModel):
         except cls.DoesNotExist:
             existed_already = False
         return obj, existed_already
+
+    async def fetch(self) -> discord.Message:
+        discord_message = self.channel._discord_obj.get_message(self.id)
+        if discord_message is None:
+            discord_message = await self.channel._discord_obj.fetch_message(self.id)
+        self._discord_obj = discord_message
+        return discord_message
 
 
 class Settings(Model):
