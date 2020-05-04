@@ -252,7 +252,7 @@ Example: ::
         member = await self.db.load(ctx.author)
         await ctx.send(f"You have {member.balance} currency.")
 
-*[TODO] Hero Models as parameters*
+*Hero Models as parameters*
 
 You can define a discord-hero Model as a parameter type for a command.
 This will automatically parse the user input and pass a (loaded) instance
@@ -280,12 +280,12 @@ for those.
 
 `self.ctl`
 
-Your Extension's Controller. None if your Extension doesn't have
+Your Extension's Controller. ``None`` if your Extension doesn't have
 a ``hero.Controller`` subclass (you can only have one per Extension).
 
 `self.settings`
 
-Your Extension's Settings. None if your Extension doesn't have
+Your Extension's Settings. ``None`` if your Extension doesn't have
 a ``hero.Settings`` subclass (you can only have one per Extension).
 
 **Note:** You need at least one Cog for your extension to work.
