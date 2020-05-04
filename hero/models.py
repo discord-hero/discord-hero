@@ -218,7 +218,7 @@ class CoreSettings(Model):
     home = fields.GuildField(null=True, on_delete=fields.SET_NULL)
 
 
-class DiscordModel(Model, converter.Converter):
+class DiscordModel(Model):
     class Meta:
         abstract = True
 

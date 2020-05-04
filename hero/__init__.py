@@ -45,7 +45,7 @@ __title__ = 'discord-hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019 monospacedmagic et al.'
-__version__ = '0.1.0-alpha.2'
+__version__ = '0.1.0-alpha.3'
 __is_release__ = True
 
 
