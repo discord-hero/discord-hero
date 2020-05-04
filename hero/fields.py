@@ -9,7 +9,7 @@ from functools import partial
 import discord
 
 from django.db import router, signals, transaction
-from django.db.models import (BigIntegerField, BooleanField, CharField, CASCADE,
+from django.db.models import (AutoField, BigIntegerField, BooleanField, CharField, CASCADE,
                               DateField, DateTimeField, DecimalField, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
                               IntegerField, ManyToManyField as _ManyToManyField,
