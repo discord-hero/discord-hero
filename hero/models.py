@@ -487,10 +487,11 @@ class Role(DiscordModel):
 
 
 class Emoji(DiscordModel):
-    id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
+    id = fields.BigIntegerField(primary_key=True, auto_created=True)
+    guild = fields.GuildField(db_index=True, null=True, blank=True, on_delete=fields.CASCADE)
     name = fields.CharField(max_length=64)
-    animated = fields.BooleanField()
+    animated = fields.BooleanField(default=False)
+    is_custom = fields.BooleanField()
 
     _discord_cls = discord.PartialEmoji
     _discord_converter_cls = converter.PartialEmojiConverter

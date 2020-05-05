@@ -129,7 +129,7 @@ setup(
     include_package_data=True,
     keywords='discord bot framework',
     name='discord-hero',
-    packages=find_packages(include=['hero']),
+    packages=find_packages(include=['hero'], exclude=['migrations']),
     python_requires=python_requirement,
     setup_requires=setup_requirements,
     test_suite='tests',
