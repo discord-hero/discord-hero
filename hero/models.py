@@ -325,7 +325,7 @@ class User(DiscordModel):
 class Guild(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
     home = fields.BooleanField(default=False)
-    shard_id = fields.SmallIntegerField()
+    shard_id = fields.SmallIntegerField(db_index=True)
     register_time = fields.DateTimeField(auto_now_add=True)
     invite_code = fields.CharField(null=True, max_length=64, db_index=True)
     prefix = fields.CharField(null=True, max_length=64)
@@ -363,7 +363,7 @@ class Guild(DiscordModel):
 
 class TextChannel(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(on_delete=fields.CASCADE)
+    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
     language = fields.LanguageField()
 
     _discord_cls = discord.TextChannel
@@ -395,7 +395,7 @@ class TextChannel(DiscordModel):
 
 class VoiceChannel(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(on_delete=fields.CASCADE)
+    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
 
     _discord_cls = discord.VoiceChannel
     _discord_converter_cls = converter.VoiceChannelConverter
@@ -426,7 +426,7 @@ class VoiceChannel(DiscordModel):
 
 class CategoryChannel(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(on_delete=fields.CASCADE)
+    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
 
     _discord_cls = discord.CategoryChannel
     _discord_converter_cls = converter.CategoryChannelConverter
@@ -457,7 +457,7 @@ class CategoryChannel(DiscordModel):
 
 class Role(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(on_delete=fields.CASCADE)
+    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
 
     _discord_cls = discord.Role
     _discord_converter_cls = converter.RoleConverter
@@ -488,7 +488,7 @@ class Role(DiscordModel):
 
 class Emoji(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(on_delete=fields.CASCADE)
+    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
     name = fields.CharField(max_length=64)
     animated = fields.BooleanField()
 
@@ -525,8 +525,8 @@ class Member(DiscordModel):
         unique_together = (('user', 'guild'),)
 
     auto_id = _models.BigAutoField(primary_key=True)
-    user = fields.UserField(on_delete=fields.CASCADE)
-    guild = fields.GuildField(on_delete=fields.CASCADE)
+    user = fields.UserField(db_index=True, on_delete=fields.CASCADE)
+    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
 
     _discord_cls = discord.Member
     _discord_converter_cls = converter.MemberConverter
@@ -571,7 +571,7 @@ class Message(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
     channel = fields.TextChannelField(db_index=True, on_delete=fields.CASCADE)
     author = fields.UserField(db_index=True, on_delete=fields.CASCADE)
-    guild = fields.GuildField(null=True, db_index=True, on_delete=fields.CASCADE)
+    guild = fields.GuildField(null=True, blank=True, db_index=True, on_delete=fields.CASCADE)
 
     _discord_cls = discord.Message
     _discord_converter_cls = converter.MessageConverter
