@@ -23,10 +23,11 @@ class Extension:
     def get_controller(self, core):
         db = hero.Database(core)
         cache = hero.get_cache(self.name)
+        settings = core.get_settings(self.name)
         _ControllerClass = self._controller_cls
         if _ControllerClass is None:
             return None
-        return _ControllerClass(core, self, db, cache)
+        return _ControllerClass(core, self, db, cache, settings)
 
     @property
     def _controller_cls(self):

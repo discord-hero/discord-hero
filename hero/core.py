@@ -56,7 +56,7 @@ class Core(commands.Bot):
 
     def __getattr__(self, item):
         try:
-            self.__controllers[item]
+            return self.__controllers[item]
         except KeyError:
             raise AttributeError("'Core' object has no attribute '%s'" % item)
 
@@ -182,8 +182,8 @@ class Core(commands.Bot):
         except ImportError:
             cog_module = importlib.import_module(f'hero.extensions.{name}.cogs')
 
-        self.__controllers[name] = self.__extensions[name].get_controller(self)
         self.__settings[name] = self.__extensions[name].get_settings(self)
+        self.__controllers[name] = self.__extensions[name].get_controller(self)
 
         if hasattr(cog_module, 'setup'):
             cog_module.setup(self, name)
