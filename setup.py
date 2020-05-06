@@ -18,6 +18,7 @@ with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as readme_f
 python_requirement = '>= 3.7.0'
 
 requirements = [
+    "auto-all",
     "django",
     "discord.py",
     "aiocache",

@@ -13,6 +13,10 @@ from collections import namedtuple
 import os
 import re
 
+from auto_all import start_all, end_all
+
+start_all(globals())
+
 ROOT_DIR = os.getcwd()
 """str: The root directory of the running application.
 Use in conjunction with ``os.path.join``.
@@ -39,14 +43,12 @@ from .cache import cached, get_cache
 from .core import Core
 
 
-__all__ = ['ROOT_DIR', 'Core', 'Cog', 'Extension', 'VERSION', 'VersionInfo', 'TEST']
-
 __title__ = 'discord-hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019 monospacedmagic et al.'
-__version__ = '0.1.0-alpha.5'
-__is_release__ = True
+__version__ = '0.1.0-alpha.6'
+__is_release__ = False
 
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial',
@@ -73,3 +75,5 @@ VERSION = VersionInfo(*re.match(version_pattern, __version__).groups())
 LANGUAGE = i18n.Languages.default
 
 TEST = None
+
+end_all(globals())
