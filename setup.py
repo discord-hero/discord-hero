@@ -18,7 +18,6 @@ with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as readme_f
 python_requirement = '>= 3.7.0'
 
 requirements = [
-    "auto-all",
     "django",
     "discord.py",
     "aiocache",
@@ -100,14 +99,12 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: JavaScript',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3 :: Only',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Topic :: Communications :: Chat',
-        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Application Frameworks',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ],
@@ -115,8 +112,8 @@ setup(
         'publish': PublishCommand,
     },
     dependency_links=[],
-    description="discord-hero is an asynchronous, fully modular application framework for humans "
-                "allowing you to write applications that connect to Discord as a bot.",
+    description="discord-hero is an asynchronous, fully modular Discord bot framework that comes with "
+                "batteries included, allowing you to write powerful Discord applications easily and quickly.",
     entry_points={
         'console_scripts': [
             'hero=hero.cli:main_cli',

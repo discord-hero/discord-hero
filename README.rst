@@ -1,17 +1,16 @@
 discord-hero
 ============
 
-discord-hero (or d-hero for short) is an **asynchronous, fully modular
-application framework for humans** allowing you to write
-applications that connect to `Discord <https://discordapp.com/>`_ via
-a bot user. It is intended for:
+discord-hero is an asynchronous, fully modular Discord bot framework that comes with
+batteries included, allowing you to write powerful `Discord <https://discordapp.com/>`_
+applications easily and quickly. It is intended for:
 
 -  developers interested in an **easy way to develop a powerful public
    or private Discord bot** with a clean, readable, pythonic,
    persistent storage solution and easy-to-use caching
 -  managers of Discord communities who want to **automate tasks on
    Discord** in a highly customizable way and/or without relying on
-   external solutions
+   external bots
 -  beginner and intermediate level developers who are interested in
    asynchronous concurrency with Python using asyncio
 -  any developer who's interested in trying something new and
@@ -22,7 +21,7 @@ the tools experienced developers enjoy using to build production-ready
 applications for communities, games or companies on Discord:
 
 -  a **Discord bot** built on top of
-   `discord.py <https://github.com/Rapptz/discord.py/tree/rewrite>`_
+   `discord.py <https://github.com/Rapptz/discord.py>`_
 -  [TODO] a **GraphQL API** powered by
    `Graphene <https://graphene-python.org/>`_ via
    `Starlette <https://www.starlette.io/>`_
@@ -32,6 +31,10 @@ applications for communities, games or companies on Discord:
    `aiocache <https://github.com/argaen/aiocache>`_ and
    `aioredis <https://github.com/aio-libs/aioredis>`_
 -  full modularity thanks to a clever Extension system
+
+You might think now that with all these dependencies the program will perform badly,
+but from experience so far that is actually not the case at all! Continue
+reading if you want to give it a test run.
 
 Getting started
 ---------------
@@ -147,10 +150,11 @@ to create a ``Command``. ::
 Event listeners
 ~~~~~~~~~~~~~~~
 
-Start a coroutine method’s name with ``on_`` to turn it into an event
+Decorate a Cog's async method with ``hero.listener()`` to turn it into an event
 listener. Valid listener names and parameters can be looked up
-`here <https://discordpy.readthedocs.io/en/rewrite/api.html#event-reference>`__. ::
+`here <https://discordpy.readthedocs.io/en/stable/api.html#event-reference>`__. ::
 
+   @hero.listener()
    async def on_message(self, message: discord.Message):
        # essentially be a stereotypical parrot
        if message.author != self.bot.user:

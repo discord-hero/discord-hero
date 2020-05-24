@@ -17,12 +17,14 @@ import aiohttp
 
 import discord
 from discord.ext import commands
+from discord.ext.commands import when_mentioned_or
 
 import hero
 from . import strings
 from .conf import Extensions
 from .cache import get_cache
-from .errors import InactiveUser, UserDoesNotExist
+from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist
+from .cli import style
 
 
 class CommandConflict(discord.ClientException):
@@ -32,18 +34,21 @@ class CommandConflict(discord.ClientException):
 class Core(commands.Bot):
     """Represents Hero's Core."""
 
+    YES_EMOJI = '\U00002705'
+    NO_EMOJI = '\U0000274E'
+
     def __init__(self, config, settings, name='default', loop=None):
         self.name = name
         self.__extensions = Extensions(name=name)
         self.__controllers = {}
         self.__settings = {}
-        self.cache = get_cache()
+        self.cache = get_cache(namespace=name)
         # hack that allows Discord models to fetch the Discord object they belong to using the core
         self.cache.core = self
         self.config = config
         self.settings = settings
         self.settings.load()
-        super(Core, self).__init__(command_prefix=self.get_prefixes(),
+        super(Core, self).__init__(command_prefix=when_mentioned_or(*self.get_prefixes()),
                                    loop=loop, description=self.get_description(),
                                    pm_help=None, cache_auth=False,
                                    command_not_found=strings.command_not_found,
@@ -219,7 +224,11 @@ class Core(commands.Bot):
         except Exception:
             self.settings.prefixes = old_prefixes
             raise
-        self.command_prefix = prefixes
+        self.command_prefix = when_mentioned_or(*prefixes)
+
+    @property
+    def default_prefix(self):
+        return self.get_prefixes()[0]
 
     def get_description(self):
         return self.settings.description
@@ -254,6 +263,12 @@ class Core(commands.Bot):
 
         return essentials_cog
 
+    async def on_message(self, message):
+        if not self.is_ready():
+            return
+
+        await super().on_message(message)
+
     async def wait_for_response(self, ctx, message_check=None, timeout=60):
         def response_check(message):
             is_response = ctx.message.author == message.author and ctx.message.channel == message.channel
@@ -265,7 +280,7 @@ class Core(commands.Bot):
             return None
         return response.content
 
-    async def wait_for_answer(self, ctx, timeout=60):
+    async def wait_for_confirmation(self, ctx, timeout=60):
         def is_answer(message):
             return message.content.lower().startswith('y') or message.content.lower().startswith('n')
 
@@ -285,7 +300,7 @@ class Core(commands.Bot):
 
         def choice_check(message):
             try:
-                return int(message.content.split(maxsplit=1)[0]) <= len(choices)
+                return 1 <= int(message.content.split(maxsplit=1)[0]) <= len(choices)
             except ValueError:
                 return False
 
@@ -310,6 +325,95 @@ class Core(commands.Bot):
             pages = await self.formatter.format_help_for(ctx, ctx.command)
             for page in pages:
                 await ctx.send(page)
+
+    async def on_error(self, event_method, *args, **kwargs):
+        from hero.models import User
+        type, value, traceback = sys.exc_info()
+
+        if isinstance(value, (User.DoesNotExist, InactiveUser)):
+            return
+
+        if isinstance(value, UserDoesNotExist):
+            prefix = self.default_prefix
+            delete_after = None
+            if event_method in ('raw_reaction_add', 'raw_reaction_remove'):
+                send_message = True
+                delete_after = 60
+                payload: discord.RawReactionActionEvent = args[0]
+                user = self.get_user(payload.user_id)
+                if user is None:
+                    user = self.fetch_user(payload.user_id)
+                channel = self.get_channel(payload.channel_id)
+                if channel is None:
+                    channel = await self.fetch_channel(payload.channel_id)
+            elif event_method in ('reaction_add', 'reaction_remove'):
+                send_message = True
+                delete_after = 60
+                user = args[1]
+                reaction = args[0]
+                channel = reaction.message.channel
+            elif event_method in ('raw_message_delete', 'raw_message_edit'):
+                send_message = False
+                payload = args[0]
+                channel = self.get_channel(payload.channel_id)
+                if channel is None:
+                    channel = await self.fetch_channel(payload.channel_id)
+                message = await channel.fetch_message(payload.message_id)
+                user = message.author
+            elif event_method in ('message', 'message_delete', 'message_edit'):
+                send_message = False
+                message = args[0]
+                user = message.author
+                channel = message.channel
+            elif event_method in ('member_join' or 'member_remove'):
+                send_message = True
+                user = member = args[0]
+                channel = member.guild.system_channel
+            elif event_method in ('member_update' or 'user_update'):
+                send_message = False
+                user = args[1]
+                channel = None
+            elif event_method == 'private_channel_pins_update':
+                send_message = True
+                channel = args[0]
+                user = channel.recipient
+                channel = None
+            else:
+                await super().on_error(event_method, *args, **kwargs)
+                return
+
+            error_user = self.get_user(value.user_id)
+            if error_user is None:
+                error_user = await self.fetch_user(value.user_id)
+
+            if send_message:
+                inactive = isinstance(value, InactiveUser)
+                prefix = self.default_prefix
+                register_message = await self.send_gdpr(error_user, author=user, fallback_channel=channel,
+                                                        inactive=inactive,
+                                                        prefix=prefix, delete_after=delete_after)
+
+                if not inactive and register_message is not None:
+                    saved_user = User(user.id)
+                    saved_user.is_active = False
+                    register_message = await self.db.load(register_message)
+                    saved_user.register_message = register_message
+                    await saved_user.async_save()
+                    try:
+                        await register_message.add_reaction(self.YES_EMOJI)
+                    except discord.Forbidden:
+                        pass
+            else:
+                if hero.TEST:
+                    if channel.guild:
+                        where = f"#{channel.name} on {channel.guild}"
+                    else:
+                        where = "DMs"
+                    print(style(f"DEBUG: User {error_user} is not registered in the database; origin: "
+                                f"on_{event_method} triggered by user {user} in {where}", fg='bright_blue'))
+            return
+
+        await super().on_error(event_method, *args, **kwargs)
 
     async def on_command_error(self, ctx: commands.Context, error, ignore_local_handlers=False):
         if not ignore_local_handlers:
@@ -372,23 +476,28 @@ class Core(commands.Bot):
             await ctx.send(strings.one_user_is_not_registered.format(ctx.prefix))
             return
 
-        if isinstance(error, UserDoesNotExist):
-            if ctx.author.id == error.user_id:
-                try:
-                    await ctx.author.send(strings.user_not_registered.format(ctx.author.name, ctx.prefix))
-                except discord.Forbidden:
-                    await ctx.send(strings.user_not_registered.format(ctx.author.mention, ctx.prefix))
-            else:
-                user = self.get_user(error.user_id)
-                if user is None:
-                    user = self.fetch_user(error.user_id)
-                try:
-                    await user.send(strings.other_user_not_registered.format(ctx.author.name, ctx.prefix))
-                except discord.Forbidden:
-                    await ctx.send(strings.other_user_not_registered.format(ctx.author.mention, ctx.prefix))
+        if isinstance(error, (UserDoesNotExist, InactiveUser)):
+            user = self.get_user(error.user_id)
+            if user is None:
+                user = await self.fetch_user(error.user_id)
+            inactive = isinstance(error, InactiveUser)
+            register_message = await self.send_gdpr(user, author=ctx.author, fallback_channel=ctx.channel,
+                                                    inactive=inactive, prefix=ctx.prefix)
 
-        if isinstance(error, InactiveUser):
-            await ctx.send(strings.one_user_is_inactive.format(error.user_id), delete_after=60)
+            if not inactive and register_message is not None:
+                saved_user = User(user.id)
+                saved_user.is_active = False
+                register_message: discord.Message = await self.db.load(register_message)
+                saved_user.register_message = register_message
+                await saved_user.async_save()
+                try:
+                    await register_message.add_reaction(self.YES_EMOJI)
+                except discord.Forbidden:
+                    pass
+            return
+
+        if isinstance(error, ObjectDoesNotExist) and not hero.TEST:
+            await ctx.send(str(error))
             return
 
         # ignore all other exception types, but print them to stderr
@@ -405,6 +514,64 @@ class Core(commands.Bot):
 
         print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+
+    @staticmethod
+    async def send_gdpr(user, author=None, fallback_channel=None,
+                        inactive=False, prefix=None, delete_after=None):
+        register_message = None
+        if author is None or author.id == user.id:
+            if inactive:
+                message_text = strings.user_inactive
+                try:
+                    await user.send(message_text.format(user.name, prefix))
+                except discord.Forbidden:
+                    try:
+                        await fallback_channel.send(message_text.format(user.mention, prefix),
+                                                    delete_after=delete_after or 60)
+                    except discord.Forbidden:
+                        pass
+            else:
+                message_text = strings.user_not_registered
+                try:
+                    register_message = await user.send(message_text.format(user.name, prefix))
+                except discord.Forbidden:
+                    register_message = await fallback_channel.send(message_text.format(user.mention, prefix),
+                                                                   delete_after=delete_after or 180)
+        else:
+            if inactive:
+                # author is not None
+                message_text = strings.one_user_is_inactive
+                if fallback_channel is not None:
+                    try:
+                        await fallback_channel.send(message_text.format(author.mention, str(user), prefix),
+                                                    delete_after=delete_after or 60)
+                    except discord.Forbidden:
+                        try:
+                            await author.send(message_text.format(author.name, str(user), prefix))
+                        except discord.Forbidden:
+                            pass
+                else:
+                    try:
+                        await author.send(message_text.format(author.name, str(user), prefix))
+                    except discord.Forbidden:
+                        pass
+            else:
+                message_text = strings.other_user_not_registered
+                if fallback_channel is not None:
+                    try:
+                        register_message = await fallback_channel.send(message_text.format(author.mention, user.mention, prefix),
+                                                                       delete_after=delete_after or 180)
+                    except discord.Forbidden:
+                        try:
+                            register_message = await author.send(message_text.format(author.name, str(user), prefix))
+                        except discord.Forbidden:
+                            pass
+                else:
+                    try:
+                        register_message = await author.send(message_text.format(author.name, str(user), prefix))
+                    except discord.Forbidden:
+                        pass
+        return register_message
 
     def get_oauth_url(self):
         return discord.utils.oauth_url(self.user.id)

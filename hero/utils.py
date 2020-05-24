@@ -13,7 +13,7 @@ import re
 
 import aiohttp
 
-from asgiref.sync import SyncToAsync
+from asgiref.sync import SyncToAsync, AsyncToSync
 
 import websockets
 
@@ -120,6 +120,7 @@ class SyncToAsyncThreadSafe(SyncToAsync):
 
 sync_to_async = SyncToAsync
 sync_to_async_threadsafe = SyncToAsyncThreadSafe
+async_to_sync = AsyncToSync
 
 
 class AsyncUsingDB(SyncToAsyncThreadSafe):

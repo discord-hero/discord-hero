@@ -8,6 +8,7 @@ import importlib
 
 
 class Strings:
+    # TODO
     def __init__(self, extension):
         self.extension = extension
         self.module = importlib.import_module('strings', f'hero.extensions.{extension}')
@@ -91,9 +92,10 @@ owner_recognized = "{} has been recognized and set as owner."
 
 one_user_is_not_registered = "At least one user is not registered; ask them to use `{}register`."
 
-one_user_is_inactive = "At least one user, {}, has opted out of using commands and features that " \
-                       "store data related to their Discord ID, so this feature/command cannot be used " \
-                       "if it involves them."
+one_user_is_inactive = "{0}, at least one user, {1}, has opted out of using commands and features that " \
+                       "store data related to their Discord user ID, so this feature/command cannot be used " \
+                       "if it involves them. You can ask them to use `{2}register` again to reregister " \
+                       "them in my system so you can use the feature/command you wanted to use involving them."
 
 user_not_registered = """{0}, thanks for your interest in using my features!
 I noticed that you wanted to use a feature that requires me to store data \
@@ -105,11 +107,15 @@ always change your mind.
 
 Whatever your decision looks like, I wish you lots of fun on Discord!"""
 
+user_inactive = """{0}, you have opted out of using commands and features that \
+store data related to your Discord ID, so this feature/command cannot be used.
+You can opt back in using `{1}register`."""
+
 other_user_not_registered = """Hello {0}!
 I noticed that someone wanted to use a feature that requires me to store data \
 related to your user ID on Discord. For that I need your explicit permission. \
 To allow me to store data related to your \
-user ID, please type `{1}register`. If you don't want me to store any data \
+user ID, please type `{1}register` or click on the . If you don't want me to store any data \
 related to your user ID, type `{1}unregister` instead. Don't worry, you can \
 always change your mind.
 

@@ -126,6 +126,10 @@ class Extensions(dict):
         self.update(_gen)
         self.update(_local_gen)
 
+    def reload(self):
+        # TODO
+        pass
+
     @classmethod
     def get_extension_module(cls, name: str, local: bool):
         if local:

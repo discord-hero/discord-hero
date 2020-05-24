@@ -44,3 +44,4 @@ class Cog(_discord_cog.Cog):
         return self.extension.config
 
 
+listener = Cog.listener

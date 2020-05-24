@@ -13,9 +13,24 @@ from collections import namedtuple
 import os
 import re
 
-from auto_all import start_all, end_all
+_GLOBAL_VAR_NAME = '_do_not_include_all'
 
-start_all(globals())
+
+def _start_all(globs):
+    globs[_GLOBAL_VAR_NAME] = list(globs.keys()) + [_GLOBAL_VAR_NAME]
+
+
+def _end_all(globs):
+    globs['__all__'] = list(
+        set(list(globs.keys())) - set(globs[_GLOBAL_VAR_NAME])
+    )
+
+
+_start_all(globals())
+
+start_all = _start_all
+
+end_all = _end_all
 
 ROOT_DIR = os.getcwd()
 """str: The root directory of the running application.
@@ -36,11 +51,12 @@ from discord.ext.commands import command, check, cooldown, Context
 from .utils import async_using_db
 from .conf import Config, Extension
 from .db import Database
-from .cog import Cog
+from .cog import Cog, listener
 from .controller import Controller
 # from .perms import (BotPermission, BotPermissions, BotPermissionsEnum)
 from .cache import cached, get_cache
 from .core import Core
+from .errors import ObjectDoesNotExist, ConfigurationError, InvalidArgument
 
 
 __title__ = 'discord-hero'
