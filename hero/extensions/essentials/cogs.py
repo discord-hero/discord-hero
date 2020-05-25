@@ -31,6 +31,12 @@ class Essentials(hero.Cog):
         await ctx.send("Done.")
 
     @hero.command()
+    @checks.is_owner()
+    async def set_status(self, ctx, *, status: str):
+        await self.core.set_status(status)
+        await ctx.send("Done.")
+
+    @hero.command()
     async def ping(self, ctx):
         """Calculates the ping time."""
         t_1 = time.perf_counter()

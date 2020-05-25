@@ -51,9 +51,9 @@ redo the setup process again the next start.
 
 keep_updated = "Make sure to keep discord-hero updated by using the {}update command."
 
-official_server = "Official server: {}"
+official_server = "Official support server: {}"
 
-invite_link = "https://discord.gg/rAHwvyE"
+invite_link = "https://discord.gg/T7zcpnK"
 
 bot_is_online = "{} is now online."
 

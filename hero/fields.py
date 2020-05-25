@@ -9,8 +9,8 @@ from functools import partial
 import discord
 
 from django.db import router, signals, transaction
-from django.db.models import (AutoField, BigIntegerField, BooleanField, CharField, CASCADE,
-                              DateField, DateTimeField, DecimalField, FloatField,
+from django.db.models import (AutoField, BigIntegerField, BooleanField, CharField as _CharField,
+                              CASCADE, DateField, DateTimeField, DecimalField, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
                               IntegerField, ManyToManyField as _ManyToManyField,
                               SET_DEFAULT, SET_NULL, SmallIntegerField, TextField)
@@ -171,17 +171,26 @@ class ManyToManyField(_ManyToManyField):
         self.m2m_reverse_target_field_name = lambda: get_m2m_reverse_rel().field_name
 
 
+# Django doesn't handle critical errors caused by max_length=None for some reason
+class CharField(_CharField):
+    def __init__(self, *args, **kwargs):
+        if not kwargs.get('max_length'):
+            cls = self.__class__
+            raise TypeError(f"missing required keyword argument 'max_length' in {cls.__name__}")
+        super().__init__(*args, **kwargs)
+
+
 class DiscordField(ForeignKey):
     _discord_cls = None
     _discord_obj = None
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        kwargs["to"] = type(self)._discord_cls.__name__
+        kwargs["to"] = f"hero.{type(self)._discord_cls.__name__}"
         return name, path, args, kwargs
 
     def __init__(self, *args, **kwargs):
-        kwargs["to"] = type(self)._discord_cls.__name__
+        kwargs["to"] = f"hero.{type(self)._discord_cls.__name__}"
         super(DiscordField, self).__init__(*args, **kwargs)
 
 
@@ -227,11 +236,11 @@ class ManyDiscordField(ManyToManyField):
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
-        kwargs["to"] = type(self)._discord_cls.__name__
+        kwargs["to"] = f"hero.{type(self)._discord_cls.__name__}"
         return name, path, args, kwargs
 
     def __init__(self, *args, **kwargs):
-        kwargs["to"] = type(self)._discord_cls.__name__
+        kwargs["to"] = f"hero.{type(self)._discord_cls.__name__}"
         super(ManyDiscordField, self).__init__(*args, **kwargs)
 
 
@@ -269,7 +278,7 @@ class ManyMessagesField(ManyDiscordField):
 
 class NamespaceField(ForeignKey):
     def __init__(self, **kwargs):
-        super().__init__(to='CoreSettings', on_delete=CASCADE)
+        super().__init__(to='hero.CoreSettings', on_delete=CASCADE)
 
 
 class LanguageField(CharField):
@@ -298,6 +307,10 @@ class LanguageField(CharField):
 
 
 class SeparatedValuesField(CharField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('default', [])
+        super().__init__(*args, **kwargs)
+
     def to_python(self, value):
         if not value:
             return []

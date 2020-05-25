@@ -10,8 +10,10 @@ Discord Application Framework for humans
 
 import builtins
 from collections import namedtuple
+from importlib.util import spec_from_file_location
 import os
 import re
+import sys
 
 _GLOBAL_VAR_NAME = '_do_not_include_all'
 
@@ -24,6 +26,13 @@ def _end_all(globs):
     globs['__all__'] = list(
         set(list(globs.keys())) - set(globs[_GLOBAL_VAR_NAME])
     )
+
+from django.apps import AppConfig
+
+
+class DiscordHeroConfig(AppConfig):
+    name = 'hero'
+    verbose_name = "Discord Hero"
 
 
 _start_all(globals())
@@ -42,6 +51,8 @@ LIB_ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 Use in conjunction with ``os.path.join``.
 """
 
+sys.path.append(ROOT_DIR)
+
 from .i18n import translate
 
 builtins._ = translate
@@ -49,7 +60,7 @@ builtins._ = translate
 from discord.ext.commands import command, check, cooldown, Context
 
 from .utils import async_using_db
-from .conf import Config, Extension
+from .conf import Config, Extension, ExtensionConfig
 from .db import Database
 from .cog import Cog, listener
 from .controller import Controller
@@ -59,12 +70,15 @@ from .core import Core
 from .errors import ObjectDoesNotExist, ConfigurationError, InvalidArgument
 
 
+default_app_config = f"{DiscordHeroConfig.__module__}.{DiscordHeroConfig.__name__}"
+
+
 __title__ = 'discord-hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019 monospacedmagic et al.'
-__version__ = '0.1.0-alpha.6'
-__is_release__ = True
+__version__ = '0.1.0-beta'
+__is_release__ = False
 
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial',

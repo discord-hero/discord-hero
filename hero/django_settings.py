@@ -35,12 +35,9 @@ NAMESPACE = os.getenv('NAMESPACE', 'default')
 
 # Application definition
 INSTALLED_APPS = ['hero']
-_installed = os.getenv('EXTENSIONS')
+_installed = os.getenv('INSTALLED_APPS')
 if _installed:
-    INSTALLED_APPS += ['hero.extensions.' + value for value in _installed.split(';')]
-_local_installed = os.getenv('LOCAL_EXTENSIONS')
-if _local_installed:
-    INSTALLED_APPS += ['extensions.' + value for value in _local_installed.split(';')]
+    INSTALLED_APPS += _installed.split(';')
 
 
 # Database

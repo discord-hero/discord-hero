@@ -85,28 +85,26 @@ class Core(commands.Bot):
         return {}
 
     async def on_ready(self):
+        status = self.settings.status or f"Use {self.default_prefix}help"
+        activity = discord.Game(status)
+        await self.change_presence(status=discord.Status.online, activity=activity)
         # clear terminal screen
         if os.name == 'nt':
             os.system('cls')
         else:
             os.system('clear')
 
-        print('------')
         print(strings.bot_is_online.format(self.user.name))
-        print('------')
-        # print(strings.connected_to)
-        # print(strings.connected_to_servers.format(Guild.count()))
-        # print(strings.connected_to_channels.format(TextChannel.count()))
-        # print(strings.connected_to_users.format(User.count()))
-        print("\n{} active extensions".format(len(self.__extensions)))
+        print("\n{} active extensions".format(len(self.__extensions) - 1))  # we don't count essentials
         prefix_label = strings.prefix_singular
         if len(self.get_prefixes()) > 1:
             prefix_label = strings.prefix_plural
         print("{}: {}\n".format(prefix_label, " ".join(list(self.get_prefixes()))))
-        print("------\n")
         print(strings.use_this_url)
         print(self.get_oauth_url())
-        print("\n------")
+        print("")
+        print(strings.official_server.format(strings.invite_link))
+        print("")
 
     def clear(self):
         self.recursively_remove_all_commands()
@@ -236,6 +234,16 @@ class Core(commands.Bot):
     async def set_description(self, description: str):
         self.settings.description = description
         await self.settings.async_save()
+        self.description = description
+
+    def get_status(self):
+        return self.settings.status
+
+    async def set_status(self, status: str):
+        self.settings.status = status
+        await self.settings.async_save()
+        activity = discord.Game(status)
+        await self.change_presence(activity=activity)
 
     def _load_cogs(self):
         # discord and hero each have their own definition of an extension
@@ -588,6 +596,8 @@ class Core(commands.Bot):
 
         print(strings.logging_into_discord)
         print(strings.keep_updated.format(self.command_prefix[0]))
-        print(strings.official_server.format(strings.invite_link))
 
-        self.loop.run_until_complete(self.start(self.config.bot_token, bot=True, reconnect=reconnect))
+        try:
+            self.loop.run_until_complete(self.start(self.config.bot_token, bot=True, reconnect=reconnect))
+        except asyncio.CancelledError:
+            pass

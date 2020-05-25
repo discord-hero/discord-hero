@@ -4,6 +4,8 @@
 :license: Apache-2.0 OR MIT
 """
 
+import inspect
+
 import discord
 from discord.ext.commands import converter
 
@@ -107,7 +109,37 @@ class QuerySet(_models.QuerySet):
     async_delete.__doc__ = _models.QuerySet.delete.__doc__
 
 
-class Manager(_models.manager.BaseManager.from_queryset(QuerySet)):
+class BaseManager(_models.manager.BaseManager):
+    # Django's version doesn't support callables other than functions so we have to override this
+    @classmethod
+    def _get_queryset_methods(cls, queryset_class):
+        def create_method(name, method):
+            def manager_method(self, *args, **kwargs):
+                return getattr(self.get_queryset(), name)(*args, **kwargs)
+            # support SyncToAsync
+            try:
+                manager_method.__name__ = method.__name__
+                manager_method.__doc__ = method.__doc__
+            except AttributeError:
+                manager_method.__name__ = method.func.__name__
+                manager_method.__doc__ = method.func.__doc__
+            return manager_method
+
+        new_methods = {}
+        for name, method in inspect.getmembers(queryset_class, predicate=callable):
+            # Only copy missing methods.
+            if hasattr(cls, name):
+                continue
+            # Only copy public methods or methods with the attribute `queryset_only=False`.
+            queryset_only = getattr(method, 'queryset_only', None)
+            if queryset_only or (queryset_only is None and name.startswith('_')):
+                continue
+            # Copy the method onto the manager.
+            new_methods[name] = create_method(name, method)
+        return new_methods
+
+
+class Manager(BaseManager.from_queryset(QuerySet)):
     pass
 
 
@@ -215,6 +247,7 @@ class CoreSettings(Model):
     name = fields.CharField(primary_key=True, max_length=64)
     prefixes = fields.SeparatedValuesField(max_length=256, default=['!'])
     description = fields.TextField(max_length=512, blank=True, null=True)
+    status = fields.CharField(max_length=128, blank=True, null=True)
     lang = fields.LanguageField()
     home = fields.GuildField(blank=True, null=True, on_delete=fields.SET_NULL)
 
@@ -289,7 +322,7 @@ class User(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
     is_staff = fields.BooleanField(default=False, db_index=True)
     is_active = fields.BooleanField(default=True, db_index=True)
-    register_message = fields.MessageField(blank=True, none=True, on_delete=fields.SET_NULL)
+    register_message = fields.MessageField(blank=True, null=True, on_delete=fields.SET_NULL)
     language = fields.LanguageField()
 
     _discord_cls = discord.User
@@ -506,7 +539,6 @@ class Role(DiscordModel):
 
 class Emoji(DiscordModel):
     id = fields.BigIntegerField(primary_key=True, auto_created=True)
-    guild = fields.GuildField(db_index=True, null=True, blank=True, on_delete=fields.CASCADE)
     name = fields.CharField(max_length=64)
     animated = fields.BooleanField(default=False)
     is_custom = fields.BooleanField()
@@ -518,12 +550,13 @@ class Emoji(DiscordModel):
     @classmethod
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
-        if not isinstance(discord_obj, cls.discord_cls):
+        if not isinstance(discord_obj, (cls.discord_cls, discord.Emoji)):
             raise TypeError(f"discord_obj has to be a discord.{cls.discord_cls.__name__} "
+                            f"or discord.Emoji"
                             f"but a {type(discord_obj).__name__} was passed")
-        guild = async_to_sync(Guild.from_discord_obj(discord_obj.guild))
-        obj = cls(id=discord_obj.id, guild=guild,
-                  name=discord_obj.name, animated=discord_obj.animated)
+        if isinstance(discord_obj, discord.Emoji):
+            discord_obj = discord.PartialEmoji(name=discord_obj.name, animated=discord_obj.animated, id=discord_obj.id)
+        obj = cls(id=discord_obj.id, name=discord_obj.name, animated=discord_obj.animated)
         obj._discord_obj = discord_obj
         try:
             obj.load()

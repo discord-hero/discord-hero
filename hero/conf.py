@@ -9,16 +9,31 @@ from importlib.util import spec_from_file_location, module_from_spec
 import inspect
 import os
 
+from django.apps import AppConfig
 from django.core.management.utils import get_random_secret_key
+
 from dotenv import load_dotenv
 
 import hero
+from .errors import ConfigurationError
+
+
+class ExtensionConfig(AppConfig):
+    def __init_subclass__(cls, **kwargs):
+        cls.name = cls.__module__
 
 
 class Extension:
     def __init__(self, name: str, module):
         self.name = name
         self._module = module
+
+    @property
+    def config_cls(self) -> ExtensionConfig:
+        config_class = inspect.getmembers(self._module, lambda member: isinstance(member, type)
+                                                                       and issubclass(member, ExtensionConfig)
+                                                                       and member is not ExtensionConfig)
+        return config_class[0][1]
 
     def get_controller(self, core):
         db = hero.Database(core)
@@ -42,13 +57,18 @@ class Extension:
         controller_class = inspect.getmembers(controller_module, lambda member: isinstance(member, type)
                                                                                 and issubclass(member, hero.Controller)
                                                                                 and member is not hero.Controller)
-        return next(controller_class)[1]
+        return controller_class[0][1]
 
     def get_settings(self, core):
         _SettingsModel = self._settings_model
         if _SettingsModel is None:
             return None
-        return _SettingsModel(pk=core.settings.namespace)
+        settings = _SettingsModel(pk=core.settings.name)
+        try:
+            settings.load()
+        except _SettingsModel.DoesNotExist:
+            pass
+        return settings
 
     @property
     def _settings_model(self):
@@ -68,7 +88,7 @@ class Extension:
                                                                           and member is not CoreSettings)
         if not len(settings_model):
             return None
-        return next(settings_model)[1]
+        return settings_model[0][1]
 
     def load_models(self):
         from hero.models import Model
@@ -103,19 +123,17 @@ class Extensions(dict):
 
     def load(self):
         with open(os.path.join(hero.ROOT_DIR, 'extensions.txt')) as extensions_file:
-            _tmp = ';'.join(extensions_file.readlines())
-        os.environ['EXTENSIONS'] = _tmp
+            _extensions = extensions_file.read().splitlines()
+        os.environ['EXTENSIONS'] = ';'.join(_extensions)
         with open(os.path.join(hero.ROOT_DIR, 'local_extensions.txt')) as local_extensions_file:
-            _local_tmp = ';'.join(local_extensions_file.readlines())
-        os.environ['LOCAL_EXTENSIONS'] = _local_tmp
-        _extensions = os.getenv('EXTENSIONS')
+            _local_extensions = local_extensions_file.read().splitlines()
+        os.environ['LOCAL_EXTENSIONS'] = ';'.join(_local_extensions)
         if _extensions:
-            self._extensions = ['essentials'] + _extensions.split(';')
+            self._extensions = ['essentials'] + _extensions
         else:
             self._extensions = ['essentials']
-        _local_extensions = os.getenv('LOCAL_EXTENSIONS')
         if _local_extensions:
-            self._local_extensions = _local_extensions.split(';')
+            self._local_extensions = _local_extensions
         else:
             self._local_extensions = []
         _gen = ((_name, Extension(_name, self.get_extension_module(_name, local=False)))
@@ -132,8 +150,10 @@ class Extensions(dict):
 
     @classmethod
     def get_extension_module(cls, name: str, local: bool):
+        if name == "essentials":
+            return None
         if local:
-            spec = spec_from_file_location(f'hero.extensions.{name}',
+            spec = spec_from_file_location(f'extensions.{name}',
                                            os.path.join(hero.ROOT_DIR, 'extensions',
                                                         name, '__init__.py'))
         else:
@@ -198,3 +218,12 @@ class Config:
             config_dict = self.generate_config_dict()
         self._generate_dotenv_file(config_dict)
         self.reload()
+
+
+def get_extension_config(extension_name, local=False):
+    module = Extensions.get_extension_module(extension_name, local=local)
+    extension = Extension(extension_name, module)
+    try:
+        return extension.config_cls
+    except (KeyError, StopIteration):
+        raise ConfigurationError(f"extension {extension_name} doesn't have a hero.ExtensionConfig subclass")

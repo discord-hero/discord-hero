@@ -15,7 +15,7 @@ from django.core import management
 
 import hero
 from hero.cli import prompt, confirm, launch
-from hero.conf import Config
+from hero.conf import Config, get_extension_config
 
 
 def main(test, **kwargs):
@@ -57,9 +57,22 @@ def main(test, **kwargs):
 
     # load extensions
     with open(os.path.join(hero.ROOT_DIR, 'extensions.txt')) as extensions_file:
-        os.environ['EXTENSIONS'] = ';'.join(extensions_file.readlines())
+        extensions = extensions_file.read().splitlines()
+        os.environ['EXTENSIONS'] = ';'.join(extensions)
     with open(os.path.join(hero.ROOT_DIR, 'local_extensions.txt')) as local_extensions_file:
-        os.environ['LOCAL_EXTENSIONS'] = ';'.join(local_extensions_file.readlines())
+        local_extensions = local_extensions_file.read().splitlines()
+        os.environ['LOCAL_EXTENSIONS'] = ';'.join(local_extensions)
+
+    configs = []
+    for extension in extensions:
+        configs.append(get_extension_config(extension))
+    for local_extension in local_extensions:
+        configs.append(get_extension_config(local_extension, local=True))
+
+    installed_apps = []
+    for _config in configs:
+        installed_apps.append(f"{_config.__module__}.{_config.__name__}")
+    os.environ['INSTALLED_APPS'] = ';'.join(installed_apps)
 
     hero.TEST = test
     os.environ['PROD'] = str(not test)
@@ -70,15 +83,6 @@ def main(test, **kwargs):
     # setup django
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hero.django_settings")
     django.setup(set_prefix=False)
-
-    # handle database model changes of the library itself
-    management.call_command('makemigrations', 'hero', interactive=False)
-    management.call_command('makemigrations', 'hero', interactive=False, merge=True)
-
-    try:
-        management.call_command('migrate', 'hero', interactive=False)
-    except management.CommandError as command_error:
-        print(command_error)
 
     from hero.models import CoreSettings
 
@@ -109,7 +113,7 @@ def main(test, **kwargs):
         management.call_command('makemigrations', interactive=False)
         management.call_command('makemigrations', interactive=False, merge=True)
         try:
-            management.call_command('migrate', interactive=False)
+            management.call_command('migrate', interactive=False, run_syncdb=True)
         except management.CommandError as command_error:
             print(command_error)
 
