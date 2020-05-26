@@ -206,8 +206,8 @@ class Model(_models.Model):
     def async_delete(self, keep_parents=False, **kwargs):
         super().delete(keep_parents=keep_parents, **kwargs)
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def async_get(cls, **kwargs):
         return cls.objects.get(**kwargs)
 
@@ -215,8 +215,8 @@ class Model(_models.Model):
     def get(cls, **kwargs):
         return cls.objects.get(**kwargs)
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def async_create(cls, **kwargs):
         return cls.objects.create(**kwargs)
 
@@ -224,8 +224,8 @@ class Model(_models.Model):
     def create(cls, **kwargs):
         return cls.objects.create(**kwargs)
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def async_get_or_create(cls, defaults=None, **kwargs):
         return cls.objects.get_or_create(defaults=defaults, **kwargs)
 
@@ -233,8 +233,8 @@ class Model(_models.Model):
     def get_or_create(cls, defaults=None, **kwargs):
         return cls.objects.get_or_create(defaults=defaults, **kwargs)
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def async_update_or_create(cls, defaults=None, **kwargs):
         return cls.objects.update_or_create(defaults=defaults, **kwargs)
 
@@ -260,8 +260,8 @@ class DiscordModel(Model):
     _discord_cls = None
     _discord_converter_cls = None
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls.discord_cls):
@@ -408,8 +408,8 @@ class TextChannel(DiscordModel):
     _discord_cls = discord.TextChannel
     _discord_converter_cls = converter.TextChannelConverter
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls.discord_cls):
@@ -442,8 +442,8 @@ class VoiceChannel(DiscordModel):
     _discord_cls = discord.VoiceChannel
     _discord_converter_cls = converter.VoiceChannelConverter
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls.discord_cls):
@@ -476,8 +476,8 @@ class CategoryChannel(DiscordModel):
     _discord_cls = discord.CategoryChannel
     _discord_converter_cls = converter.CategoryChannelConverter
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls.discord_cls):
@@ -510,8 +510,8 @@ class Role(DiscordModel):
     _discord_cls = discord.Role
     _discord_converter_cls = converter.RoleConverter
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls.discord_cls):
@@ -546,8 +546,8 @@ class Emoji(DiscordModel):
     _discord_cls = discord.PartialEmoji
     _discord_converter_cls = converter.PartialEmojiConverter
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, (cls.discord_cls, discord.Emoji)):
@@ -600,8 +600,8 @@ class Member(DiscordModel):
                 return self._discord_obj.id
         return super().__getattr__(name)
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, discord.Member):
@@ -649,8 +649,8 @@ class Message(DiscordModel):
     def guild(self, value):
         self.channel.guild = value
 
-    @sync_to_async_threadsafe
     @classmethod
+    @sync_to_async_threadsafe
     def from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls.discord_cls):
