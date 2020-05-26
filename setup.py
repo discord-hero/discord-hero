@@ -88,7 +88,7 @@ setup(
     author="monospacedmagic",
     author_email='luci@monospacedmagic.dev',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 4 - Beta',
         'Environment :: Console',
         'Environment :: Other Environment',
         'Environment :: Web Environment',
@@ -132,7 +132,7 @@ setup(
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
-    url='https://github.com/monospacedmagic/discord-hero',
+    url='https://github.com/discord-hero/discord-hero',
     version=version,
     zip_safe=False,
 )
