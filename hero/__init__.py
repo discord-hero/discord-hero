@@ -107,7 +107,7 @@ def version(_version: str):
 
 VERSION = version(__version__)
 
-LANGUAGE = i18n.Languages.default
+LANGUAGE = os.getenv('LANGUAGE', i18n.Languages.default)
 
 TEST = None
 
