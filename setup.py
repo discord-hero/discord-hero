@@ -92,6 +92,8 @@ setup(
         'Environment :: Other Environment',
         'Environment :: Web Environment',
         'Framework :: AsyncIO',
+        'Framework :: Django',
+        'Framework :: Django :: 3.0',
         'Intended Audience :: Developers',
         'Intended Audience :: End Users/Desktop',
         'License :: OSI Approved :: Apache Software License',

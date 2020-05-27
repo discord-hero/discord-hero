@@ -100,7 +100,12 @@ version_pattern = re.compile(
     r'\.(0|[1-9]\d*|\d*[A-Za-z][\dA-Za-z]*))*'
 )
 
-VERSION = VersionInfo(*re.match(version_pattern, __version__).groups())
+
+def version(_version: str):
+    return VersionInfo(*re.match(version_pattern, _version).groups())
+
+
+VERSION = version(__version__)
 
 LANGUAGE = i18n.Languages.default
 
