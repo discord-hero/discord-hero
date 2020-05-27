@@ -4,7 +4,7 @@
 import codecs
 import os
 import re
-from setuptools import find_packages, setup, Command
+from setuptools import find_namespace_packages, setup, Command
 from shutil import rmtree
 import stat
 import sys
@@ -38,7 +38,6 @@ setup_requirements = []
 
 extra_requirements = {
     'redis': ['aioredis>=1.0.0'],
-    'memcached': ['aiomcache>=0.5.2'],
     'postgresql': ['psycopg2'],
     'voice': ['pynacl']
 }
@@ -70,7 +69,7 @@ class PublishCommand(Command):
                 raise exc_info[0](exc_info[1])
 
         try:
-            print('Removing previous builds…')
+            print('Removing previous builds...')
             rmtree(os.path.join(here, 'dist'), onerror=onerror)
         except (OSError, FileNotFoundError):
             pass
@@ -125,9 +124,9 @@ setup(
     long_description=readme,
     long_description_content_type='text/x-rst',
     include_package_data=True,
-    keywords='discord bot framework',
+    keywords='discord bot framework django',
     name='discord-hero',
-    packages=find_packages(include=['hero'], exclude=['migrations']),
+    packages=find_namespace_packages(include=['hero.*'], exclude=['*.migrations']),
     python_requires=python_requirement,
     setup_requires=setup_requirements,
     test_suite='tests',
