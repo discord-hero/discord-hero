@@ -27,6 +27,8 @@ from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist
 from .cli import style
 from .db import Database
 
+from django.core import management
+
 
 class CommandConflict(discord.ClientException):
     pass
@@ -278,6 +280,15 @@ class Core(commands.Bot):
             print("\nFailed to load: " + ", ".join(failed))
 
         return essentials_cog
+    
+    @staticmethod()
+    def sync_db():
+        management.call_command('makemigrations', interactive=False)
+        management.call_command('makemigrations', interactive=False, merge=True)
+        try:
+            management.call_command('migrate', interactive=False, run_syncdb=True)
+        except management.CommandError as command_error:
+            print(command_error)
 
     async def on_message(self, message):
         if not self.is_ready():
