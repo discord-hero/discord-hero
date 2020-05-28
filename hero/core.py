@@ -19,6 +19,8 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import when_mentioned_or
 
+from django.core import management
+
 import hero
 from . import strings
 from .conf import Extensions
@@ -278,6 +280,15 @@ class Core(commands.Bot):
             print("\nFailed to load: " + ", ".join(failed))
 
         return essentials_cog
+    
+    @staticmethod()
+    def sync_db():
+        management.call_command('makemigrations', interactive=False)
+        management.call_command('makemigrations', interactive=False, merge=True)
+        try:
+            management.call_command('migrate', interactive=False, run_syncdb=True)
+        except management.CommandError as command_error:
+            print(command_error)
 
     async def on_message(self, message):
         if not self.is_ready():
