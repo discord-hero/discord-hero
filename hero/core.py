@@ -281,7 +281,7 @@ class Core(commands.Bot):
 
         return essentials_cog
     
-    @staticmethod()
+    @staticmethod
     def sync_db():
         management.call_command('makemigrations', interactive=False)
         management.call_command('makemigrations', interactive=False, merge=True)
