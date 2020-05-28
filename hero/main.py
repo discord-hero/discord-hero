@@ -100,12 +100,10 @@ def main(test, **kwargs):
     loop = asyncio.get_event_loop()
 
     # db config values
-    settings = CoreSettings(os.getenv('NAMESPACE'))
-    try:
-        settings.load()
-    except CoreSettings.DoesNotExist:
+    settings, created = CoreSettings.get_or_create(name=os.getenv('NAMESPACE'))
+    if created:
         settings.prefixes = [prompt("Bot command prefix", value_proc=str, default='!')]
-        settings.description = [prompt("Short description of your bot", value_proc=str, default='')]
+        settings.description = prompt("Short description of your bot", value_proc=str, default='')
         settings.save()
 
     with hero.Core(config=config, settings=settings, name=os.getenv('NAMESPACE', 'default'), loop=loop) as core:

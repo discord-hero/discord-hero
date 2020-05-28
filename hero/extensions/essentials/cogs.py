@@ -13,6 +13,7 @@ from discord import RawReactionActionEvent
 
 import hero
 from hero import checks, models, strings
+from hero.errors import InactiveUser, UserDoesNotExist
 
 
 class Essentials(hero.Cog):
@@ -47,13 +48,26 @@ class Essentials(hero.Cog):
 
     # GDPR
     @hero.command()
-    async def register(self, ctx):
+    async def register(self, ctx: hero.Context):
         """Registers you in my system."""
-        user, existed_already = await models.User.from_discord_obj(ctx.author)
-        if existed_already:
+        if ctx.guild:
+            user = ctx.author._user
+        else:
+            user = ctx.author
+
+        try:
+            user = await self.db.wrap_user(user)
+            print(user, user.is_active)
             await ctx.send("You are already registered in my system!")
             return
-        await user.async_save()
+        except UserDoesNotExist:
+            user = models.User(user.id)
+            await user.async_save()
+        except InactiveUser:
+            user = models.User(user.id)
+            user.is_active = True
+            await user.async_save()
+
         await ctx.send("You are now registered. Thank you for using my commands and functions!\n\n"
                        "If you ever change your mind, just use `{ctx.prefix}unregister` to "
                        "remove yourself from my system, which will irreversibly and immediately "
@@ -63,11 +77,22 @@ class Essentials(hero.Cog):
     @hero.command()
     async def unregister(self, ctx):
         """Removes you from my system."""
-        user, existed_already = await models.User.from_discord_obj(ctx.author)
-        if existed_already:
+        if ctx.guild:
+            user = ctx.author._user
+        else:
+            user = ctx.author
+
+        try:
+            user = await self.db.wrap_user(user)
+            print(user, user.is_active)
             await user.async_delete()
-        user.is_active = False
-        await user.async_save()
+        except UserDoesNotExist:
+            user = models.User(user.id)
+            user.is_active = False
+            await user.async_save()
+        except InactiveUser:
+            await ctx.send("You are already unregistered!")
+            return
         await ctx.send(f"You have been successfully removed from my system! You will have to use "
                        f"`{ctx.prefix}register` if you change your mind to enable storing data "
                        f"related to your Discord user ID again.")

@@ -25,6 +25,7 @@ from .conf import Extensions
 from .cache import get_cache
 from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist
 from .cli import style
+from .db import Database
 
 
 class CommandConflict(discord.ClientException):
@@ -45,6 +46,7 @@ class Core(commands.Bot):
         self.cache = get_cache(namespace=name)
         # hack that allows Discord models to fetch the Discord object they belong to using the core
         self.cache.core = self
+        self.db = Database(self)
         self.config = config
         self.settings = settings
         self.settings.load()
@@ -54,7 +56,7 @@ class Core(commands.Bot):
                                    command_not_found=strings.command_not_found,
                                    command_has_no_subcommands=strings.command_has_no_subcommands)
 
-        user_agent = 'discord-hero (https://github.com/monospacedmagic/discord-hero {0}) ' \
+        user_agent = 'discord-hero (https://github.com/discord-hero/discord-hero {0}) ' \
                      'Python/{1} aiohttp/{2} discord.py/{3}'
         self.http.user_agent = user_agent.format(hero.__version__, sys.version.split(maxsplit=1)[0],
                                                  aiohttp.__version__, discord.__version__)
@@ -150,7 +152,7 @@ class Core(commands.Bot):
                 else:
                     async def groupcmd(ctx):
                         if ctx.invoked_subcommand is None:
-                            await self.send_command_help(ctx)
+                            await ctx.send_help()
 
                     group_help = strings.group_help.format(group_name)
                     group_command = self.group(name=entire_group, invoke_without_command=True,
@@ -216,12 +218,17 @@ class Core(commands.Bot):
 
     async def set_prefixes(self, prefixes):
         old_prefixes = self.settings.prefixes
+        print(old_prefixes)
         self.settings.prefixes = prefixes
         try:
             await self.settings.async_save()
         except Exception:
             self.settings.prefixes = old_prefixes
             raise
+        # test
+        from hero.models import CoreSettings
+        _settings = await CoreSettings.async_get(name=self.settings.name)
+        print(_settings.prefixes)
         self.command_prefix = when_mentioned_or(*prefixes)
 
     @property
@@ -264,6 +271,7 @@ class Core(commands.Bot):
                     print("{}: {}".format(error.__class__.__name__, str(error)))
                 else:
                     traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+                del self.__extensions[extension]
                 failed.append(extension)
 
         if failed:
@@ -280,7 +288,7 @@ class Core(commands.Bot):
     async def wait_for_response(self, ctx, message_check=None, timeout=60):
         def response_check(message):
             is_response = ctx.message.author == message.author and ctx.message.channel == message.channel
-            return is_response and message_check(message) if callable(message_check) else True
+            return is_response and (message_check(message) if callable(message_check) else True)
 
         try:
             response = await self.wait_for('message', check=response_check, timeout=timeout)
@@ -289,10 +297,10 @@ class Core(commands.Bot):
         return response.content
 
     async def wait_for_confirmation(self, ctx, timeout=60):
-        def is_answer(message):
+        def is_confirmation(message):
             return message.content.lower().startswith('y') or message.content.lower().startswith('n')
 
-        answer = await self.wait_for_response(ctx, message_check=is_answer, timeout=timeout)
+        answer = await self.wait_for_response(ctx, message_check=is_confirmation, timeout=timeout)
         if answer is None:
             return None
         if answer.lower().startswith('y'):
@@ -323,16 +331,6 @@ class Core(commands.Bot):
         if choice is None:
             return None
         return int(choice.split(maxsplit=1)[0])
-
-    async def send_command_help(self, ctx):
-        if ctx.invoked_subcommand:
-            pages = await self.formatter.format_help_for(ctx, ctx.invoked_subcommand)
-            for page in pages:
-                await ctx.send(page)
-        else:
-            pages = await self.formatter.format_help_for(ctx, ctx.command)
-            for page in pages:
-                await ctx.send(page)
 
     async def on_error(self, event_method, *args, **kwargs):
         from hero.models import User
@@ -464,7 +462,7 @@ class Core(commands.Bot):
 
         if isinstance(error, commands.UserInputError):
             await ctx.send("Invalid input.")
-            await self.send_command_help(ctx)
+            await ctx.send_help()
             return
 
         if isinstance(error, commands.NoPrivateMessage):

@@ -63,11 +63,7 @@ class Extension:
         _SettingsModel = self._settings_model
         if _SettingsModel is None:
             return None
-        settings = _SettingsModel(pk=core.settings.name)
-        try:
-            settings.load()
-        except _SettingsModel.DoesNotExist:
-            pass
+        settings, _ = _SettingsModel.get_or_create(namespace=core.settings)
         return settings
 
     @property
@@ -225,5 +221,5 @@ def get_extension_config(extension_name, local=False):
     extension = Extension(extension_name, module)
     try:
         return extension.config_cls
-    except (KeyError, StopIteration):
+    except IndexError:
         raise ConfigurationError(f"extension {extension_name} doesn't have a hero.ExtensionConfig subclass")

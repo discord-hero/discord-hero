@@ -58,7 +58,8 @@ class Database:
             raise TypeError("user must be a discord.User or discord.Member")
         if isinstance(user, discord.Member):
             user = user._user
-        return await self.load(user)
+        user, _ = await self.load(user)
+        return user
 
     async def wrap_guild(self, guild: discord.Guild):
         """Wrap a Guild object obtained from Discord
@@ -71,7 +72,9 @@ class Database:
         """
         if not isinstance(guild, discord.Guild):
             raise TypeError("guild must be a discord.Guild")
-        return await self.load(guild)
+        guild, _ = await self.load(guild)
+        return guild
+
 
     async def wrap_text_channel(self, text_channel: discord.TextChannel):
         """Wrap a TextChannel object obtained from Discord
@@ -84,7 +87,8 @@ class Database:
         """
         if not isinstance(text_channel, discord.TextChannel):
             raise TypeError("text_channel must be a discord.TextChannel")
-        return await self.load(text_channel)
+        text_channel, _ = await self.load(text_channel)
+        return text_channel
 
     async def wrap_voice_channel(self, voice_channel: discord.VoiceChannel):
         """Wrap a VoiceChannel object obtained from Discord
@@ -97,7 +101,8 @@ class Database:
         """
         if not isinstance(voice_channel, discord.VoiceChannel):
             raise TypeError("voice_channel must be a discord.VoiceChannel")
-        return await self.load(voice_channel)
+        voice_channel, _ = await self.load(voice_channel)
+        return voice_channel
 
     async def wrap_category_channel(self, category_channel: discord.CategoryChannel):
         """Wrap a CategoryChannel object obtained from Discord
@@ -123,7 +128,8 @@ class Database:
         """
         if not isinstance(role, discord.Role):
             raise TypeError("role must be a discord.Role")
-        return await self.load(role)
+        role, _ = await self.load(role)
+        return role
 
     async def wrap_emoji(self, emoji: Union[discord.Emoji, discord.PartialEmoji]):
         """Wrap a Emoji (or discord.PartialEmoji) object obtained
@@ -136,7 +142,8 @@ class Database:
         """
         if not isinstance(emoji, (discord.Emoji, discord.PartialEmoji)):
             raise TypeError("emoji must be a discord.Emoji or discord.PartialEmoji")
-        return await self.load(emoji)
+        emoji, _ = await self.load(emoji)
+        return emoji
 
     async def wrap_member(self, member: discord.Member):
         """Wrap a Member object obtained from Discord
@@ -149,7 +156,8 @@ class Database:
         """
         if not isinstance(member, discord.Member):
             raise TypeError("member must be a discord.Member")
-        return await self.load(member)
+        member, _ = await self.load(member)
+        return member
 
     async def wrap_message(self, message: discord.Message):
         """Wrap a Message object obtained from Discord
@@ -162,4 +170,5 @@ class Database:
         """
         if not isinstance(message, discord.Message):
             raise TypeError("message must be a discord.Message")
-        return await self.load(message)
+        message, _ = await self.load(message)
+        return message

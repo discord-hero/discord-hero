@@ -10,7 +10,6 @@ Discord Application Framework for humans
 
 import builtins
 from collections import namedtuple
-from importlib.util import spec_from_file_location
 import os
 import re
 import sys
@@ -77,7 +76,7 @@ __title__ = 'discord-hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019-2020 monospacedmagic et al.'
-__version__ = '0.1.0-beta.2'
+__version__ = '0.1.0-beta.3'
 __is_release__ = True
 
 
@@ -102,7 +101,12 @@ version_pattern = re.compile(
 
 
 def version(_version: str):
-    return VersionInfo(*re.match(version_pattern, _version).groups())
+    try:
+        return VersionInfo(*re.match(version_pattern, _version).groups())
+    except AttributeError:
+        raise ConfigurationError(f"Invalid extension version string: {_version}\n"
+                                 f"Follow semantic versioning and do NOT include "
+                                 f"a leading 'v'")
 
 
 VERSION = version(__version__)
