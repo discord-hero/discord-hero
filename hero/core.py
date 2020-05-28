@@ -19,6 +19,8 @@ import discord
 from discord.ext import commands
 from discord.ext.commands import when_mentioned_or
 
+from django.core import management
+
 import hero
 from . import strings
 from .conf import Extensions
@@ -26,8 +28,6 @@ from .cache import get_cache
 from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist
 from .cli import style
 from .db import Database
-
-from django.core import management
 
 
 class CommandConflict(discord.ClientException):
