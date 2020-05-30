@@ -109,6 +109,11 @@ def version(_version: str):
                                  f"a leading 'v'")
 
 
+def version_str(_version: VersionInfo):
+    return '.'.join((_version.major, _version.minor, _version.micro))\
+           + (('-' + '.'.join((_version.releaselevel, _version.serial))) if _version.releaselevel else '')
+
+
 VERSION = version(__version__)
 
 LANGUAGE = os.getenv('LANGUAGE', i18n.Languages.default)
