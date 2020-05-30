@@ -38,8 +38,7 @@ setup_requirements = []
 
 extra_requirements = {
     'redis': ['aioredis>=1.0.0'],
-    'postgresql': ['psycopg2'],
-    'voice': ['pynacl']
+    'postgresql': ['psycopg2']
 }
 
 with codecs.open(os.path.join(here, 'hero', '__init__.py'), encoding='utf-8') as f:
@@ -48,13 +47,15 @@ with codecs.open(os.path.join(here, 'hero', '__init__.py'), encoding='utf-8') as
 
 
 class PublishCommand(Command):
-    """Support setup.py publish."""
+    """Support setup.py publish [--test]"""
 
     description = 'Build and publish the package.'
-    user_options = []
+    user_options = [
+        ('test', None, 'publish to TestPyPI')
+    ]
 
     def initialize_options(self):
-        pass
+        self.test = False
 
     def finalize_options(self):
         pass
@@ -69,7 +70,7 @@ class PublishCommand(Command):
                 raise exc_info[0](exc_info[1])
 
         try:
-            print('Removing previous builds...')
+            print('Removing previous buildsâ€¦')
             rmtree(os.path.join(here, 'dist'), onerror=onerror)
         except (OSError, FileNotFoundError):
             pass
@@ -77,8 +78,12 @@ class PublishCommand(Command):
         print('Building Source and Wheel distribution...')
         os.system('{0} setup.py sdist bdist_wheel'.format(sys.executable))
 
-        print('Uploading the package to PyPI via Twine...')
-        os.system('twine upload dist/*')
+        if self.test:
+            print('Uploading the package to TestPyPI via Twine...')
+            os.system('twine upload --repository testpypi dist/*')
+        else:
+            print('Uploading the package to PyPI via Twine...')
+            os.system('twine upload dist/*')
 
         sys.exit()
 
