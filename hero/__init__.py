@@ -77,7 +77,7 @@ __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019-2020 monospacedmagic et al.'
 __version__ = '0.1.0-beta.4'
-__is_release__ = False
+__is_release__ = True
 
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial',
