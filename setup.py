@@ -133,7 +133,7 @@ setup(
     include_package_data=True,
     keywords='discord bot framework django',
     name='discord-hero',
-    packages=find_namespace_packages(include=['hero.*', 'hero.extensions.essentials'], exclude=['*.migrations']),
+    packages=find_namespace_packages(include=['hero', 'hero.*', 'hero.extensions.essentials'], exclude=['*.migrations']),
     python_requires=python_requirement,
     setup_requires=setup_requirements,
     test_suite='tests',
