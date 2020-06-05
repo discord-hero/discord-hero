@@ -29,3 +29,15 @@ class UserDoesNotExist(ObjectDoesNotExist):
     def __init__(self, *args, user_id=None):
         self.user_id = user_id
         super().__init__(*args)
+
+
+class ExtensionNotFound(Exception):
+    def __init__(self, *args, name=None):
+        self.name = name
+        super().__init__(*args)
+
+
+class ExtensionAlreadyExists(Exception):
+    def __init__(self, *args, name=None):
+        self.name = name
+        super().__init__(*args)

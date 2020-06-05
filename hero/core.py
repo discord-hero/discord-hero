@@ -206,6 +206,9 @@ class Core(commands.Bot):
         self.__extensions.loaded_by_core.append(name)
         return cog_module
 
+    def get_extension(self, name):
+        return self.__extensions.get(name)
+
     def get_extensions(self):
         return self.__extensions.data
 
@@ -280,7 +283,7 @@ class Core(commands.Bot):
             print("\nFailed to load: " + ", ".join(failed))
 
         return essentials_cog
-    
+
     @staticmethod
     def sync_db():
         management.call_command('makemigrations', interactive=False)

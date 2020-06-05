@@ -15,7 +15,7 @@ from django.core.management.utils import get_random_secret_key
 from dotenv import load_dotenv
 
 import hero
-from .errors import ConfigurationError
+from .errors import ConfigurationError, ExtensionNotFound, InvalidArgument
 
 
 class ExtensionConfig(AppConfig):
@@ -27,6 +27,17 @@ class Extension:
     def __init__(self, name: str, module):
         self.name = name
         self._module = module
+
+    @classmethod
+    async def convert(cls, ctx, argument):
+        core: hero.Core = ctx.bot
+        try:
+            argument = str(argument)
+            extension = core.get_extension(argument)
+        except TypeError:
+            raise InvalidArgument("extension must be an extension name")
+        if extension is None:
+            raise ExtensionNotFound(name=argument)
 
     @property
     def config_cls(self) -> ExtensionConfig:
