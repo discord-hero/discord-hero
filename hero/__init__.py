@@ -10,9 +10,24 @@ Discord Application Framework for humans
 
 import builtins
 from collections import namedtuple
+import logging as _logging
 import os
 import re
 import sys
+
+# enable ANSI color codes on Windows
+try:
+    import colorama
+    colorama.init()
+except ImportError:
+    pass
+else:
+    colorama.init()
+
+# silence aiocache warnings about optional dependencies
+aiocache_logger = _logging.getLogger('aiocache.serializers.serializers')
+aiocache_logger.setLevel('ERROR')
+
 
 _GLOBAL_VAR_NAME = '_do_not_include_all'
 
@@ -62,11 +77,14 @@ from .utils import async_using_db
 from .conf import Config, Extension, ExtensionConfig
 from .db import Database
 from .cog import Cog, listener
-from .controller import Controller
 # from .perms import (BotPermission, BotPermissions, BotPermissionsEnum)
 from .cache import cached, get_cache
 from .core import Core
+from .controller import Controller
 from .errors import ObjectDoesNotExist, ConfigurationError, InvalidArgument
+
+
+aiocache_logger.setLevel('WARNING')
 
 
 default_app_config = f"{DiscordHeroConfig.__module__}.{DiscordHeroConfig.__name__}"
