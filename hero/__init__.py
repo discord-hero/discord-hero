@@ -65,6 +65,8 @@ LIB_ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 Use in conjunction with ``os.path.join``.
 """
 
+_, LIB_DIR_NAME = os.path.split(os.path.dirname(LIB_ROOT_DIR))
+
 sys.path.append(ROOT_DIR)
 
 from .i18n import translate
@@ -95,8 +97,8 @@ __title__ = 'discord-hero'
 __author__ = 'monospacedmagic et al.'
 __license__ = 'Apache-2.0 OR MIT'
 __copyright__ = 'Copyright 2019-2020 monospacedmagic et al.'
-__version__ = '0.1.0-beta.5'
-__is_release__ = True
+__version__ = '0.1.0-beta.6'
+__is_release__ = LIB_DIR_NAME == 'site-packages'
 
 
 VersionInfo = namedtuple('VersionInfo', 'major minor micro releaselevel serial',
