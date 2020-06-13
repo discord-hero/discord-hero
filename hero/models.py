@@ -270,14 +270,9 @@ class DiscordModel(Model):
         if not isinstance(discord_obj, cls._discord_cls):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
-        obj = cls(id=discord_obj.id)
+        obj, created = cls.objects.get_or_create(id=discord_obj.id)
         obj._discord_obj = discord_obj
-        try:
-            obj.load()
-            existed_already = True
-        except cls.DoesNotExist:
-            existed_already = False
-        return obj, existed_already
+        return obj, not created
 
     @classmethod
     async def convert(cls, ctx, argument):
@@ -336,9 +331,11 @@ class User(DiscordModel):
     @classmethod
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
-        if not isinstance(discord_obj, cls._discord_cls):
+        if not isinstance(discord_obj, (cls._discord_cls, discord.ClientUser)):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
+        if discord_obj.bot and discord_obj.id != discord_obj._state.user.id:
+            raise ValueError("Bot users cannot be stored in the database")
         qs = cls.objects.filter(id=discord_obj.id)
         existed_already = qs.exists()
         if not existed_already:
@@ -357,21 +354,24 @@ class User(DiscordModel):
         _id = self.id
         name = self.name
         super().delete(using=using, keep_parents=keep_parents)
-        if not User.objects.filter(id=_id).exists():
-            print("Deleted user", name)
         new_user = User(id=_id, is_active=False)
         new_user.save()
 
     @async_using_db
     def async_load(self, prefetch_related=True):
-        super().load(prefetch_related=False)
-        if not self.is_active:
-            raise self.InactiveUser(f"The user {self.id} is inactive")
+        self.load(prefetch_related=prefetch_related)
 
     def load(self, prefetch_related=True):
         super().load(prefetch_related=True)
         if not self.is_active:
-            raise self.InactiveUser(f"The user {self.id} is inactive")
+            raise InactiveUser(f"The user {self.id} is inactive")
+
+    @async_using_db
+    def _get_register_message(self):
+        # allows internals to bypass GDPR checks to make the GDPR functionality
+        # itself work, e.g. to handle register reactions
+        super().load(prefetch_related=False)
+        return self.register_message
 
     async def fetch(self) -> discord.User:
         if not self._is_loaded:
@@ -386,7 +386,7 @@ class User(DiscordModel):
 class Guild(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
     home = fields.BooleanField(default=False)
-    shard_id = fields.SmallIntegerField(db_index=True)
+    # shard_id = fields.SmallIntegerField(db_index=True)
     register_time = fields.DateTimeField(auto_now_add=True)
     invite_code = fields.CharField(null=True, blank=True, max_length=64, db_index=True)
     prefix = fields.CharField(null=True, blank=True, max_length=64)
@@ -426,8 +426,10 @@ class Guild(DiscordModel):
 
 
 class TextChannel(DiscordModel):
+    # can also be a DMChannel
     id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
+    guild = fields.GuildField(db_index=True, null=True, blank=True, on_delete=fields.CASCADE)
+    is_dm = fields.BooleanField(default=False)
     language = fields.LanguageField()
 
     _discord_cls = discord.TextChannel
@@ -437,24 +439,38 @@ class TextChannel(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"but a {type(discord_obj).__name__} was passed")
-        guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-        obj = cls(id=discord_obj.id, guild=guild)
+            if isinstance(discord_obj, discord.DMChannel):
+                is_dm = True
+            else:
+                raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                                f"or a discord.DMChannel "
+                                f"but a {type(discord_obj).__name__} was passed")
+        else:
+            is_dm = False
+
+        if is_dm:
+            obj, created = cls.objects.get_or_create(id=discord_obj.id, is_dm=True)
+        else:
+            guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
+            obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild, is_dm=False)
+
         obj._discord_obj = discord_obj
-        try:
-            obj.load()
-            existed_already = True
-        except cls.DoesNotExist:
-            existed_already = False
-        return obj, existed_already
+        return obj, not created
+
+    @classmethod
+    async def convert(cls, ctx, argument):
+        discord_obj = await cls._discord_converter_cls.convert(ctx, argument)
+        obj, existed_already = await cls.from_discord_obj(discord_obj)
+        if not existed_already:
+            await obj.async_save()
+        return obj
 
     async def fetch(self) -> discord.TextChannel:
         discord_text_channel = self._core.get_channel(self.id)
         if discord_text_channel is None:
             discord_text_channel = await self._core.fetch_channel(self.id)
         self._discord_obj = discord_text_channel
-        if not self.guild.is_fetched:
+        if not self.is_dm and not self.guild.is_fetched:
             await self.guild.fetch()
         return discord_text_channel
 
@@ -473,14 +489,9 @@ class VoiceChannel(DiscordModel):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
         guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-        obj = cls(id=discord_obj.id, guild=guild)
+        obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
         obj._discord_obj = discord_obj
-        try:
-            obj.load()
-            existed_already = True
-        except cls.DoesNotExist:
-            existed_already = False
-        return obj, existed_already
+        return obj, not created
 
     async def fetch(self) -> discord.VoiceChannel:
         discord_voice_channel = self._core.get_channel(self.id)
@@ -506,14 +517,9 @@ class CategoryChannel(DiscordModel):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
         guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-        obj = cls(id=discord_obj.id, guild=guild)
+        obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
         obj._discord_obj = discord_obj
-        try:
-            obj.load()
-            existed_already = True
-        except cls.DoesNotExist:
-            existed_already = False
-        return obj, existed_already
+        return obj, not created
 
     async def fetch(self) -> discord.CategoryChannel:
         discord_category_channel = self._core.get_channel(self.id)
@@ -539,14 +545,9 @@ class Role(DiscordModel):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
         guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-        obj = cls(id=discord_obj.id, guild=guild)
+        obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
         obj._discord_obj = discord_obj
-        try:
-            obj.load()
-            existed_already = True
-        except cls.DoesNotExist:
-            existed_already = False
-        return obj, existed_already
+        return obj, not created
 
     async def fetch(self) -> discord.Role:
         if not self.guild.is_fetched:
@@ -576,14 +577,9 @@ class Emoji(DiscordModel):
                             f"but a {type(discord_obj).__name__} was passed")
         if isinstance(discord_obj, discord.Emoji):
             discord_obj = discord.PartialEmoji(name=discord_obj.name, animated=discord_obj.animated, id=discord_obj.id)
-        obj = cls(id=discord_obj.id, name=discord_obj.name, animated=discord_obj.animated)
+        obj, created = cls.objects.get_or_create(id=discord_obj.id, name=discord_obj.name, animated=discord_obj.animated)
         obj._discord_obj = discord_obj
-        try:
-            obj.load()
-            existed_already = True
-        except cls.DoesNotExist:
-            existed_already = False
-        return obj, existed_already
+        return obj, not created
 
     async def fetch(self) -> discord.PartialEmoji:
         if self.is_custom:
@@ -626,7 +622,7 @@ class Member(DiscordModel):
         if not isinstance(discord_obj, discord.Member):
             raise TypeError(f"discord_obj has to be a discord.Member "
                             f"but a {type(discord_obj).__name__} was passed")
-        _user, _ = User.sync_from_discord_obj(discord_obj.user)
+        _user, _ = User.sync_from_discord_obj(discord_obj._user)
         _guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
         # workaround for the nonexistence of composite primary keys in Django
         qs = cls.objects.filter(user=_user, guild=_guild)
@@ -635,7 +631,7 @@ class Member(DiscordModel):
             obj.load()
             existed_already = True
         else:
-            obj = cls(user=_user, guild=_guild)
+            obj = cls.objects.create(user=_user, guild=_guild)
             existed_already = False
         obj._discord_obj = discord_obj
         return obj, existed_already
@@ -666,6 +662,8 @@ class Message(DiscordModel):
 
     @guild.setter
     def guild(self, value):
+        if self.channel.is_dm:
+            raise AttributeError("Cannot set guild of private message")
         self.channel.guild = value
 
     @classmethod
@@ -675,15 +673,14 @@ class Message(DiscordModel):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
         channel, _ = TextChannel.sync_from_discord_obj(discord_obj.channel)
-        author, _ = Member.sync_from_discord_obj(discord_obj.author)
-        obj = cls(id=discord_obj.id, channel=channel, author=author)
+        if discord_obj.guild:
+            user = discord_obj.author._user
+        else:
+            user = discord_obj.author
+        author, _ = User.sync_from_discord_obj(user)
+        obj, created = cls.objects.get_or_create(id=discord_obj.id, channel=channel, author=author)
         obj._discord_obj = discord_obj
-        try:
-            obj.load()
-            existed_already = True
-        except cls.DoesNotExist:
-            existed_already = False
-        return obj, existed_already
+        return obj, not created
 
     async def fetch(self) -> discord.Message:
         if not self.channel.is_fetched:

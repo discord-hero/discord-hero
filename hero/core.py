@@ -7,11 +7,13 @@
 import asyncio
 import importlib
 import inspect
+import io
 import math
 import os
 import sys
 import traceback
 import types
+import warnings
 
 import aiohttp
 
@@ -23,11 +25,13 @@ from django.core import management
 
 import hero
 from . import strings
-from .conf import Extensions
+from .command import group
+from .conf import Extension, Extensions
 from .cache import get_cache
 from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist
 from .cli import style
 from .db import Database
+from .utils import issubmodule
 
 
 class CommandConflict(discord.ClientException):
@@ -37,12 +41,13 @@ class CommandConflict(discord.ClientException):
 class Core(commands.Bot):
     """Represents Hero's Core."""
 
-    YES_EMOJI = '\U00002705'
-    NO_EMOJI = '\U0000274E'
+    YES_EMOJI = '\u2705'
+    NO_EMOJI = '\u274E'
 
     def __init__(self, config, settings, name='default', loop=None):
         self.name = name
         self.__extensions = Extensions(name=name)
+        self.failed_extensions = []
         self.__controllers = {}
         self.__settings = {}
         self.cache = get_cache(namespace=name)
@@ -50,8 +55,20 @@ class Core(commands.Bot):
         self.cache.core = self
         self.db = Database(self)
         self.config = config
+
+        self.sync_db('hero')
+
+        extension_names = set(os.getenv('EXTENSIONS', '').split(';'))
+        extension_names.update(os.getenv('LOCAL_EXTENSIONS', '').split(';'))
+        if '' in extension_names:
+            extension_names.remove('')
+        self.sync_db(*extension_names)
+
         self.settings = settings
-        self.settings.load()
+        if self.settings is None:
+            from hero.models import CoreSettings
+            self.settings = CoreSettings.get_or_create(name=os.getenv('NAMESPACE'))
+
         super(Core, self).__init__(command_prefix=when_mentioned_or(*self.get_prefixes()),
                                    loop=loop, description=self.get_description(),
                                    pm_help=None, cache_auth=False,
@@ -89,6 +106,13 @@ class Core(commands.Bot):
         return {}
 
     async def on_ready(self):
+        from hero.models import User
+        # save the bot user in the database if it isn't saved yet
+        qs = User.objects.filter(id=self.user.id)
+        existed_already = await qs.async_exists()
+        if not existed_already:
+            await User.async_create(id=self.user.id)
+
         status = self.settings.status or f"Use {self.default_prefix}help"
         activity = discord.Game(status)
         await self.change_presence(status=discord.Status.online, activity=activity)
@@ -105,10 +129,8 @@ class Core(commands.Bot):
             prefix_label = strings.prefix_plural
         print("{}: {}\n".format(prefix_label, " ".join(list(self.get_prefixes()))))
         print(strings.use_this_url)
-        print(self.get_oauth_url())
-        print("")
-        print(strings.official_server.format(strings.invite_link))
-        print("")
+        print(self.get_oauth_url(), "\n")
+        print(strings.official_server.format(strings.invite_link), "\n")
 
     def clear(self):
         self.recursively_remove_all_commands()
@@ -161,15 +183,28 @@ class Core(commands.Bot):
                                                help=group_help)(groupcmd)
                     self._resolve_groups(group_command)
 
-                self.all_commands.pop(cog_or_command.name)
-                cog_or_command.name = command_name
-                group_command.add_command(cog_or_command)
+                cog_or_command = self.all_commands.get(cog_or_command.name)
+                # cog_or_command.name = command_name
+                if cog_or_command is not None:
+                    group_command.add_command(cog_or_command)
 
         else:
             raise TypeError("cog_or_command must be either a cog or a command")
 
+    def group(self, *args, **kwargs):
+        """A shortcut decorator that invokes :func:`.group` and adds it to
+        the internal command list via :meth:`~.GroupMixin.add_command`.
+        """
+        def decorator(func):
+            kwargs.setdefault('parent', self)
+            result = group(*args, **kwargs)(func)
+            self.add_command(result)
+            return result
+
+        return decorator
+
     def load_extension(self, name):
-        """Loads an extension's cog module.
+        """Loads an extension
 
         Parameters
         ----------
@@ -186,25 +221,122 @@ class Core(commands.Bot):
             raise commands.ExtensionAlreadyLoaded(name)
         try:
             cog_module = importlib.import_module(f'extensions.{name}.cogs')
+            _local = True
         except ImportError:
             cog_module = importlib.import_module(f'hero.extensions.{name}.cogs')
+            _local = False
 
-        self.__settings[name] = self.__extensions[name].get_settings(self)
-        self.__controllers[name] = self.__extensions[name].get_controller(self)
+        if name not in self.config.disabled_extensions:
+            if name not in self.__extensions:
+                self.__extensions[name] = Extension(name, Extensions.get_extension_module(name, local=_local))
 
-        if hasattr(cog_module, 'setup'):
-            cog_module.setup(self, name)
+            self.__settings[name] = self.__extensions[name].get_settings(self)
+            self.__controllers[name] = self.__extensions[name].get_controller(self)
+
+            if hasattr(cog_module, 'setup'):
+                cog_module.setup(self, name)
+            else:
+                cog_classes = inspect.getmembers(cog_module, lambda member: isinstance(member, type) and
+                                                 issubclass(member, hero.Cog) and member is not hero.Cog)
+                for _, _Cog in cog_classes:
+                    if _Cog is None:
+                        raise ImportError(f"The {name} extension's cog module didn't have "
+                                          f"any Cog subclass and no setup function")
+                    self.add_cog(_Cog(self, self.__extensions[name]))
+
+            self.__extensions.loaded_by_core.append(name)
+            return cog_module
         else:
-            cog_classes = inspect.getmembers(cog_module, lambda member: isinstance(member, type) and
-                                             issubclass(member, hero.Cog) and member is not hero.Cog)
-            for _, _Cog in cog_classes:
-                if _Cog is None:
-                    raise ImportError(f"The {name} extension's cog module didn't have "
-                                      f"any Cog subclass and no setup function")
-                self.add_cog(_Cog(self, self.__extensions[name]))
+            del self.__extensions[name]
+            return None
 
-        self.__extensions.loaded_by_core.append(name)
-        return cog_module
+    def unload_extension(self, name):
+        extension = self.__extensions.get(name)
+        if extension is None:
+            raise commands.ExtensionNotLoaded(name)
+
+        lib = extension._module
+
+        print(lib.__name__)
+        self._remove_module_references(lib.__name__)
+        self._call_module_finalizers(lib, name)
+        self.__extensions.loaded_by_core.remove(name)
+
+    def reload_extension(self, name):
+        extension = self.__extensions.get(name)
+        if extension is None:
+            raise commands.ExtensionNotLoaded(name)
+
+        lib = extension._module
+
+        # get the previous module states from sys modules
+        modules = {
+            name: module
+            for name, module in sys.modules.items()
+            if issubmodule(lib.__name__, name)
+        }
+
+        try:
+            # Unload and then load the module...
+            self._remove_module_references(lib.__name__)
+            self._call_module_finalizers(lib, name)
+            self.__extensions.loaded_by_core.remove(name)
+            self.load_extension(name)
+        except Exception as e:
+            # if the load failed, the remnants should have been
+            # cleaned from the load_extension function call
+            # so let's load it from our old compiled library.
+            try:
+                lib.setup(self)
+            except AttributeError:
+                pass
+            self.__extensions[name] = lib
+
+            # revert sys.modules back to normal and raise back to caller
+            sys.modules.update(modules)
+            raise
+
+    def _remove_module_references(self, name):
+        # find all references to the module
+        # remove the cogs registered from the module
+        print("Name:", name)
+        for cogname, cog in self.cogs.copy().items():
+            if issubmodule(name, cog.__module__):
+                print(cogname)
+                self.remove_cog(cogname)
+
+        # remove all the commands from the module
+        for cmd in self.all_commands.copy().values():
+            if cmd.module is not None and issubmodule(name, cmd.module):
+                if isinstance(cmd, commands.GroupMixin):
+                    print("Removing group:", cmd.name)
+                    cmd.recursively_remove_all_commands()
+                else:
+                    print("Removing command:", cmd.name)
+                    self.remove_command(cmd.name)
+
+        # remove all the listeners from the module
+        for event_list in self.extra_events.copy().values():
+            remove = []
+            for index, event in enumerate(event_list):
+                if event.__module__ is not None and issubmodule(name, event.__module__):
+                    remove.append(index)
+
+            for index in reversed(remove):
+                del event_list[index]
+
+    def _call_module_finalizers(self, lib, key):
+        try:
+            func = getattr(lib, 'teardown')
+        except AttributeError:
+            pass
+        else:
+            try:
+                func(self)
+            except Exception as ex:
+                warnings.warn(f"Couldn't teardown {lib.__name__} properly: {ex}")
+        finally:
+            self.__extensions.pop(key, None)
 
     def get_extension(self, name):
         return self.__extensions.get(name)
@@ -223,7 +355,6 @@ class Core(commands.Bot):
 
     async def set_prefixes(self, prefixes):
         old_prefixes = self.settings.prefixes
-        print(old_prefixes)
         self.settings.prefixes = prefixes
         try:
             await self.settings.async_save()
@@ -233,7 +364,6 @@ class Core(commands.Bot):
         # test
         from hero.models import CoreSettings
         _settings = await CoreSettings.async_get(name=self.settings.name)
-        print(_settings.prefixes)
         self.command_prefix = when_mentioned_or(*prefixes)
 
     @property
@@ -284,14 +414,30 @@ class Core(commands.Bot):
 
         return essentials_cog
 
-    @staticmethod
-    def sync_db():
-        management.call_command('makemigrations', interactive=False)
-        management.call_command('makemigrations', interactive=False, merge=True)
+    def sync_db(self, *extension_names):
+        if not extension_names:
+            extension_names = list(self.__extensions.keys())
+
+        print(f"Synchronizing database with models from {', '.join(extension_names)}...", end=' ')
+        # temporarily silence stdout while we sync the database
+        backup_stdout = sys.stdout
+        sys.stdout = io.StringIO()
         try:
-            management.call_command('migrate', interactive=False, run_syncdb=True)
+            management.call_command('makemigrations', *extension_names, interactive=False)
+            management.call_command('makemigrations', *extension_names, interactive=False, merge=True)
+            for extension_name in extension_names:
+                try:
+                    management.call_command('migrate', extension_name, interactive=False)
+                except management.CommandError:
+                    management.call_command('migrate', extension_name, interactive=False, run_syncdb=True)
         except management.CommandError as command_error:
-            print(command_error)
+            print(command_error, file=sys.stderr)
+            return False
+        else:
+            print(style("OK", fg='green'), file=backup_stdout)
+            return True
+        finally:
+            sys.stdout = backup_stdout
 
     async def on_message(self, message):
         if not self.is_ready():
@@ -416,7 +562,7 @@ class Core(commands.Bot):
                 if not inactive and register_message is not None:
                     saved_user = User(user.id)
                     saved_user.is_active = False
-                    register_message = await self.db.load(register_message)
+                    register_message = await self.db.wrap_message(register_message)
                     saved_user.register_message = register_message
                     await saved_user.async_save()
                     try:
@@ -435,11 +581,7 @@ class Core(commands.Bot):
 
         await super().on_error(event_method, *args, **kwargs)
 
-    async def on_command_error(self, ctx: commands.Context, error, ignore_local_handlers=False):
-        if not ignore_local_handlers:
-            if hasattr(ctx.command, 'on_error'):
-                return
-
+    async def on_command_error(self, ctx: commands.Context, error):
         # get the original exception
         error = getattr(error, 'original', error)
 
@@ -507,7 +649,7 @@ class Core(commands.Bot):
             if not inactive and register_message is not None:
                 saved_user = User(user.id)
                 saved_user.is_active = False
-                register_message: discord.Message = await self.db.load(register_message)
+                register_message: discord.Message = await self.db.wrap_message(register_message)
                 saved_user.register_message = register_message
                 await saved_user.async_save()
                 try:
@@ -525,15 +667,18 @@ class Core(commands.Bot):
         await ctx.send("An error occured while running the command **{0}**.".format(ctx.command))
 
         if hero.TEST:
-            error_details = traceback.format_exception(type(error), error, error.__traceback__)
-            paginator = commands.Paginator(prefix='```py')
-            for line in error_details:
-                paginator.add_line(line)
-            for page in paginator.pages:
-                await ctx.send(page)
+            await self.report_error(ctx, error)
 
         print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
+
+    async def report_error(self, ctx, error: BaseException):
+        error_details = traceback.format_exception(type(error), error, error.__traceback__)
+        paginator = commands.Paginator(prefix='```py')
+        for line in error_details:
+            paginator.add_line(line)
+        for page in paginator.pages:
+            await ctx.send(page)
 
     @staticmethod
     async def send_gdpr(user, author=None, fallback_channel=None,
@@ -597,7 +742,6 @@ class Core(commands.Bot):
         return discord.utils.oauth_url(self.user.id)
 
     def run(self, reconnect=True):
-        # self._connection.core = self
         self._load_cogs()
 
         if self.get_prefixes():
@@ -607,7 +751,6 @@ class Core(commands.Bot):
             self.command_prefix = ["!"]
 
         print(strings.logging_into_discord)
-        print(strings.keep_updated.format(self.command_prefix[0]))
 
         try:
             self.loop.run_until_complete(self.start(self.config.bot_token, bot=True, reconnect=reconnect))

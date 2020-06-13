@@ -49,8 +49,6 @@ Otherwise you can type 'reset' to delete the current configuration and
 redo the setup process again the next start.
 > """
 
-keep_updated = "Make sure to keep discord-hero updated by using the {}update command."
-
 official_server = "Official support server: {}"
 
 invite_link = "https://discord.gg/T7zcpnK"
@@ -101,7 +99,7 @@ user_not_registered = """{0}, thanks for your interest in using my features!
 I noticed that you wanted to use a feature that requires me to store data \
 related to your user ID on Discord. For that I need your explicit permission \
 before you can use my commands. To allow me to store data related to your \
-user ID, please type `{1}register`. If you don't want me to store any data \
+user ID, please type `{1}register` or react with \u2705. If you don't want me to store any data \
 related to your user ID, type `{1}unregister` instead. Don't worry, you can \
 always change your mind.
 
@@ -115,7 +113,7 @@ other_user_not_registered = """Hello {0}!
 I noticed that someone wanted to use a feature that requires me to store data \
 related to your user ID on Discord. For that I need your explicit permission. \
 To allow me to store data related to your \
-user ID, please type `{1}register` or click on the . If you don't want me to store any data \
+user ID, please type `{1}register` or react with \u2705. If you don't want me to store any data \
 related to your user ID, type `{1}unregister` instead. Don't worry, you can \
 always change your mind.
 

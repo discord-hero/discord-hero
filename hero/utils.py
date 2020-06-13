@@ -21,6 +21,10 @@ from discord.utils import maybe_coroutine
 from discord.errors import HTTPException, GatewayNotFound, ConnectionClosed
 
 
+def issubmodule(parent, child):
+    return parent == child or child.startswith(parent + ".")
+
+
 def ismodelobject(obj, model_cls=None):
     # TODO check if model obj is instance of model_cls
     if model_cls is not None:

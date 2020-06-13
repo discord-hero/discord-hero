@@ -80,6 +80,7 @@ def cached(expire_after=None, key=None, include_self=True):
     :type expire_after: Optional[int]
     :param key:
         The custom key to save the cached return value in.
+        If not provided, a key will be assigned automatically.
         :type key: Optional[str]
     :param include_self:
         Whether or not ``self`` should be included when checking

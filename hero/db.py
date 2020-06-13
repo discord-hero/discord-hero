@@ -5,6 +5,7 @@
 """
 
 from typing import Union
+import warnings
 
 import discord
 
@@ -31,6 +32,11 @@ class Database:
         self._discord_classes = tuple(self._model_map.keys())
 
     async def load(self, discord_obj):
+        warnings.warn("Database.load is deprecated; use Database.wrap_{} methods instead", DeprecationWarning)
+        obj, existed_already = await self._load(discord_obj)
+        return obj, existed_already
+
+    async def _load(self, discord_obj):
         if isinstance(discord_obj, self._discord_classes):
             cls = self._model_map[type(discord_obj)]
             obj, existed_already = await cls.from_discord_obj(discord_obj)
@@ -58,7 +64,7 @@ class Database:
             raise TypeError("user must be a discord.User or discord.Member")
         if isinstance(user, discord.Member):
             user = user._user
-        user, _ = await self.load(user)
+        user, _ = await self._load(user)
         return user
 
     async def wrap_guild(self, guild: discord.Guild):
@@ -72,9 +78,8 @@ class Database:
         """
         if not isinstance(guild, discord.Guild):
             raise TypeError("guild must be a discord.Guild")
-        guild, _ = await self.load(guild)
+        guild, _ = await self._load(guild)
         return guild
-
 
     async def wrap_text_channel(self, text_channel: discord.TextChannel):
         """Wrap a TextChannel object obtained from Discord
@@ -87,7 +92,7 @@ class Database:
         """
         if not isinstance(text_channel, discord.TextChannel):
             raise TypeError("text_channel must be a discord.TextChannel")
-        text_channel, _ = await self.load(text_channel)
+        text_channel, _ = await self._load(text_channel)
         return text_channel
 
     async def wrap_voice_channel(self, voice_channel: discord.VoiceChannel):
@@ -101,7 +106,7 @@ class Database:
         """
         if not isinstance(voice_channel, discord.VoiceChannel):
             raise TypeError("voice_channel must be a discord.VoiceChannel")
-        voice_channel, _ = await self.load(voice_channel)
+        voice_channel, _ = await self._load(voice_channel)
         return voice_channel
 
     async def wrap_category_channel(self, category_channel: discord.CategoryChannel):
@@ -115,7 +120,7 @@ class Database:
         """
         if not isinstance(category_channel, discord.CategoryChannel):
             raise TypeError("category_channel must be a discord.CategoryChannel")
-        return await self.load(category_channel)
+        return await self._load(category_channel)
 
     async def wrap_role(self, role: discord.Role):
         """Wrap a Role object obtained from Discord
@@ -128,7 +133,7 @@ class Database:
         """
         if not isinstance(role, discord.Role):
             raise TypeError("role must be a discord.Role")
-        role, _ = await self.load(role)
+        role, _ = await self._load(role)
         return role
 
     async def wrap_emoji(self, emoji: Union[discord.Emoji, discord.PartialEmoji]):
@@ -142,7 +147,7 @@ class Database:
         """
         if not isinstance(emoji, (discord.Emoji, discord.PartialEmoji)):
             raise TypeError("emoji must be a discord.Emoji or discord.PartialEmoji")
-        emoji, _ = await self.load(emoji)
+        emoji, _ = await self._load(emoji)
         return emoji
 
     async def wrap_member(self, member: discord.Member):
@@ -156,7 +161,7 @@ class Database:
         """
         if not isinstance(member, discord.Member):
             raise TypeError("member must be a discord.Member")
-        member, _ = await self.load(member)
+        member, _ = await self._load(member)
         return member
 
     async def wrap_message(self, message: discord.Message):
@@ -170,5 +175,5 @@ class Database:
         """
         if not isinstance(message, discord.Message):
             raise TypeError("message must be a discord.Message")
-        message, _ = await self.load(message)
+        message, _ = await self._load(message)
         return message

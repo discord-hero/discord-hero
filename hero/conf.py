@@ -38,6 +38,13 @@ class Extension:
             raise InvalidArgument("extension must be an extension name")
         if extension is None:
             raise ExtensionNotFound(name=argument)
+        return extension
+
+    @property
+    def module_name(self):
+        if self._module is None:
+            return None
+        return self._module.__name__
 
     @property
     def config_cls(self) -> ExtensionConfig:
@@ -151,10 +158,6 @@ class Extensions(dict):
         self.update(_gen)
         self.update(_local_gen)
 
-    def reload(self):
-        # TODO
-        pass
-
     @classmethod
     def get_extension_module(cls, name: str, local: bool):
         if name == "essentials":
@@ -180,6 +183,7 @@ class Config:
     def _load(self):
         """expects environment variables to exist already"""
         self.bot_token = os.getenv('BOT_TOKEN')
+        self.disabled_extensions = os.getenv('DISABLED_EXTENSIONS', '').split(';')
 
     @property
     def file_name(self):

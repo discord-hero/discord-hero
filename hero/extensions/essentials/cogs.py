@@ -57,7 +57,6 @@ class Essentials(hero.Cog):
 
         try:
             user = await self.db.wrap_user(user)
-            print(user, user.is_active)
             await ctx.send("You are already registered in my system!")
             return
         except UserDoesNotExist:
@@ -68,10 +67,10 @@ class Essentials(hero.Cog):
             user.is_active = True
             await user.async_save()
 
-        await ctx.send("You are now registered. Thank you for using my commands and functions!\n\n"
-                       "If you ever change your mind, just use `{ctx.prefix}unregister` to "
-                       "remove yourself from my system, which will irreversibly and immediately "
-                       "delete all data related to your Discord ID from my system.")
+        await ctx.send(f"You are now registered. Thank you for using my commands and functions!\n\n"
+                       f"If you ever change your mind, just use `{ctx.prefix}unregister` to "
+                       f"remove yourself from my system, which will irreversibly and immediately "
+                       f"delete all data related to your Discord ID from my system.")
 
     # GDPR
     @hero.command()
@@ -84,7 +83,6 @@ class Essentials(hero.Cog):
 
         try:
             user = await self.db.wrap_user(user)
-            print(user, user.is_active)
             await user.async_delete()
         except UserDoesNotExist:
             user = models.User(user.id)
@@ -106,20 +104,20 @@ class Essentials(hero.Cog):
         channel_id = payload.channel_id
 
         # obligatory checks for efficiency
-        if user_id == self.core.user.id or emoji.is_custom_emoji():
+        if user_id == self.core.user.id or emoji.is_custom_emoji() or emoji.name != self.core.YES_EMOJI:
             return
 
         # check if message is user's register_message
         user = models.User(id=user_id)
-        await user.async_load()
-        register_message = user.register_message
-        if register_message is None or register_message.id != message_id or emoji.name != self.core.YES_EMOJI:
+        register_message = await user._get_register_message()
+        if register_message is None or register_message.id != message_id:
             return
 
         # register the user
         user.is_active = True
-        user.register_message.async_delete()
         await user.async_save()
+        await user.register_message.async_delete()
+        await user.fetch()
 
         channel = None
         if guild_id is not None:

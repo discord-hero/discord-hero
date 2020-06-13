@@ -80,6 +80,7 @@ from .cog import Cog, listener
 # from .perms import (BotPermission, BotPermissions, BotPermissionsEnum)
 from .cache import cached, get_cache
 from .core import Core
+from .command import Command, command, Group, group
 from .controller import Controller
 from .errors import ObjectDoesNotExist, ConfigurationError, InvalidArgument
 

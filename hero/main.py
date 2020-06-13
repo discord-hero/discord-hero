@@ -7,14 +7,16 @@ discord-hero: Discord Application Framework for humans
 """
 
 import asyncio
+import io
 import os
 import sys
 
 import django
+from django.db import OperationalError
 from django.core import management
 
 import hero
-from hero.cli import prompt, confirm, launch
+from hero.cli import prompt, confirm, launch, style
 from hero.conf import Config, get_extension_config
 
 
@@ -55,6 +57,15 @@ def main(test, **kwargs):
     config = Config(test)
     config.save()
 
+    # automatically initialize database if using SQLite for convenience
+    if database_type == 'sqlite':
+        if ((test and not os.path.isfile(os.path.join(hero.ROOT_DIR, "test_db.sqlite3")))
+            or (not test and not os.path.isfile(os.path.join(hero.ROOT_DIR, "db.sqlite3")))):
+            print("Running `hero dbinit`")
+            database_initialization(test, from_main=True, **kwargs)
+            print("You can now use `hero` to run your Discord Hero instance.")
+            return
+
     # load extensions
     with open(os.path.join(hero.ROOT_DIR, 'extensions.txt')) as extensions_file:
         extensions = extensions_file.read().splitlines()
@@ -75,7 +86,6 @@ def main(test, **kwargs):
     os.environ['INSTALLED_APPS'] = ';'.join(installed_apps)
 
     hero.TEST = test
-    os.environ['PROD'] = str(not test)
 
     # setup cache
     hero.cache.init()
@@ -83,8 +93,6 @@ def main(test, **kwargs):
     # setup django
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hero.django_settings")
     django.setup(set_prefix=False)
-
-    from hero.models import CoreSettings
 
     # setup asyncio loop
     try:
@@ -95,24 +103,62 @@ def main(test, **kwargs):
         pass
 
     if sys.platform == "win32":
-        asyncio.set_event_loop(asyncio.ProactorEventLoop())
+        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
     loop = asyncio.get_event_loop()
 
+    from hero.models import CoreSettings
+
     # db config values
-    settings, created = CoreSettings.get_or_create(name=os.getenv('NAMESPACE'))
+    try:
+        settings, created = CoreSettings.get_or_create(name=os.getenv('NAMESPACE'))
+    except OperationalError:
+        print(style("Error: Database hasn't been initialized yet; use `hero dbinit`", fg='red'), file=sys.stderr)
+        return
     if created:
         settings.prefixes = [prompt("Bot command prefix", value_proc=str, default='!')]
         settings.description = prompt("Short description of your bot", value_proc=str, default='')
         settings.save()
 
     with hero.Core(config=config, settings=settings, name=os.getenv('NAMESPACE', 'default'), loop=loop) as core:
-        # handle database model changes
-        management.call_command('makemigrations', interactive=False)
-        management.call_command('makemigrations', interactive=False, merge=True)
-        try:
-            management.call_command('migrate', interactive=False, run_syncdb=True)
-        except management.CommandError as command_error:
-            print(command_error)
-
         core.run()
+
+
+def database_initialization(test, *, from_main=False, **kwargs):
+    if not from_main:
+        os.environ['PROD'] = str(not test)
+        os.environ.update({key: str(value) for key, value in kwargs.items() if value is not None})
+
+        database_type = os.getenv('DB_TYPE')
+        if database_type != 'sqlite':
+            os.environ['DB_HOST'] = prompt("DB host", value_proc=str, default='localhost')
+            os.environ['DB_PORT'] = prompt("DB port", value_proc=str,
+                                           default='5432' if database_type == 'postgres'
+                                           else '3306' if database_type == 'mysql' else None)
+            os.environ['DB_NAME'] = prompt("DB name", value_proc=str)
+            os.environ['DB_USER'] = prompt("DB user", value_proc=str)
+            os.environ['DB_PASSWORD'] = prompt("DB password", value_proc=str, hide_input=True)
+
+    # setup django
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hero.django_settings")
+    django.setup(set_prefix=False)
+
+    print(f"Initializing database...", end=' ')
+    # temporarily silence stdout while we sync the database
+    backup_stdout = sys.stdout
+    sys.stdout = io.StringIO()
+    try:
+        management.call_command('makemigrations', 'hero', interactive=False)
+        management.call_command('makemigrations', 'hero', interactive=False, merge=True)
+        try:
+            management.call_command('migrate', 'hero', interactive=False)
+        except management.CommandError:
+            management.call_command('migrate', 'hero', interactive=False, run_syncdb=True)
+    except management.CommandError as command_error:
+        print(command_error, file=sys.stderr)
+        return False
+    else:
+        print(style("OK", fg='green'), file=backup_stdout)
+        return True
+    finally:
+        sys.stdout = backup_stdout

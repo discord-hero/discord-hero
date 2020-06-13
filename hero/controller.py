@@ -13,12 +13,12 @@ from hero import logging
 
 
 class Controller:
-    def __init__(self, core, extension, db, cache, settings):
+    def __init__(self, core: hero.Core, extension: hero.Extension, db: hero.Database, cache, settings):
         self.core = core
         self.extension = extension
         self.db = db
         self.cache = cache
         self.settings = settings
-        self.log = logging.Logger.with_default_handlers(name=f"{self.extension.name}.controller",
+        self.log = logging.Logger.with_default_handlers(name=f"hero.extensions.{self.extension.name}.controller",
                                                         level=LogLevel.DEBUG if hero.TEST else LogLevel.INFO,
                                                         loop=self.core.loop)
