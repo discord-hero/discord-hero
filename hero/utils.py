@@ -128,7 +128,9 @@ async_to_sync = AsyncToSync
 
 
 class AsyncUsingDB(SyncToAsyncThreadSafe):
-    pass
+    @property
+    def sync(self):
+        return self.func
 
 
 async_using_db = AsyncUsingDB
