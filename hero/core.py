@@ -47,7 +47,6 @@ class Core(commands.Bot):
     def __init__(self, config, settings, name='default', loop=None):
         self.name = name
         self.__extensions = Extensions(name=name)
-        self.failed_extensions = []
         self.__controllers = {}
         self.__settings = {}
         self.cache = get_cache(namespace=name)

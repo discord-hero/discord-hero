@@ -139,6 +139,8 @@ and enable database operations inside them; otherwise a SynchronousOnlyOperation
 exception would be raised by Django. Do NOT decorate an async function with this
 as that would be not only redundant but would also stop this decorator from
 working as intended.
+
+To use functions decorated with this synchronously, call ``decorated_function.sync``.
 """
 
 
