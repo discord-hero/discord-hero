@@ -22,9 +22,8 @@ applications for communities, games or companies on Discord:
 
 -  a **Discord bot** built on top of
    `discord.py <https://github.com/Rapptz/discord.py>`_
--  [TODO] a **GraphQL API** powered by
-   `Graphene <https://graphene-python.org/>`_ via
-   `Starlette <https://www.starlette.io/>`_
+-  [TODO] a **Web API** powered by
+   `FastAPI <https://fastapi.tiangolo.com/>`_
 -  a **familiar asynchronous ORM** based on
    `Django <https://www.djangoproject.com/>`_
 -  an **easy-to-use cache system**, optionally powered by Redis, via
@@ -32,9 +31,9 @@ applications for communities, games or companies on Discord:
    `aioredis <https://github.com/aio-libs/aioredis>`_
 -  full modularity thanks to a clever Extension system
 
-You might think now that with all these dependencies the program will perform badly,
-but from experience so far that is actually not the case at all! Continue
-reading if you want to give it a test run.
+You might think that with all these dependencies Discord Hero will perform badly,
+but so far that has actually not been the case at all! Continue reading
+if you want to give it a test run.
 
 Getting started
 ---------------
