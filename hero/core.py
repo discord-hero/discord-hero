@@ -28,7 +28,7 @@ from . import strings
 from .command import group
 from .conf import Extension, Extensions
 from .cache import get_cache
-from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist
+from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist, ResponseTookTooLong
 from .cli import style
 from .db import Database
 from .utils import issubmodule
@@ -444,7 +444,7 @@ class Core(commands.Bot):
 
         await super().on_message(message)
 
-    async def wait_for_response(self, ctx, message_check=None, timeout=60):
+    async def wait_for_response(self, ctx, message_check=None, timeout=60, force_response=True) -> str:
         def response_check(message):
             is_response = ctx.message.author == message.author and ctx.message.channel == message.channel
             return is_response and (message_check(message) if callable(message_check) else True)
@@ -452,22 +452,26 @@ class Core(commands.Bot):
         try:
             response = await self.wait_for('message', check=response_check, timeout=timeout)
         except asyncio.TimeoutError:
-            return None
+            if force_response:
+                raise ResponseTookTooLong()
+            else:
+                return None
         return response.content
 
-    async def wait_for_confirmation(self, ctx, timeout=60):
+    async def wait_for_confirmation(self, ctx, timeout=60, force_response=True) -> bool:
         def is_confirmation(message):
             return message.content.lower().startswith('y') or message.content.lower().startswith('n')
 
-        answer = await self.wait_for_response(ctx, message_check=is_confirmation, timeout=timeout)
-        if answer is None:
+        answer = await self.wait_for_response(ctx, message_check=is_confirmation, timeout=timeout,
+                                              force_response=force_response)
+        if not force_response and answer is None:
             return None
         if answer.lower().startswith('y'):
             return True
         if answer.lower().startswith('n'):
             return False
 
-    async def wait_for_choice(self, ctx, choices, timeout=60):
+    async def wait_for_choice(self, ctx, choices, timeout=60, force_response=True) -> int:
         if isinstance(choices, types.GeneratorType):
             choices = list(choices)
 
@@ -487,7 +491,7 @@ class Core(commands.Bot):
             await ctx.send(page)
 
         choice = await self.wait_for_response(ctx, message_check=choice_check, timeout=timeout)
-        if choice is None:
+        if not force_response and choice is None:
             return None
         return int(choice.split(maxsplit=1)[0])
 
@@ -618,6 +622,10 @@ class Core(commands.Bot):
         if isinstance(error, commands.UserInputError):
             await ctx.send("Invalid input.")
             await ctx.send_help()
+            return
+
+        if isinstance(error, ResponseTookTooLong):
+            await ctx.send("Response took too long.")
             return
 
         if isinstance(error, commands.NoPrivateMessage):
