@@ -8,7 +8,6 @@ from functools import partial
 
 import discord
 
-from django.db import router, signals, transaction
 from django.db.models import (AutoField, BigIntegerField, BooleanField, CharField as _CharField,
                               CASCADE, DateField, DateTimeField, DecimalField, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
@@ -19,6 +18,7 @@ from django.db.models.fields.related_descriptors import (ManyToManyDescriptor as
                                                          create_forward_many_to_many_manager,
                                                          create_reverse_many_to_one_manager)
 from django.db.models.fields.related import lazy_related_operation, create_many_to_many_intermediary_model
+from django.db.models.signals import pre_delete
 from django.utils.functional import cached_property
 
 from .i18n import Languages
@@ -225,6 +225,15 @@ class RoleField(DiscordField):
 class EmojiField(DiscordField):
     _discord_cls = discord.Emoji
 
+    def _reverse_cascade(self, sender, instance, using, **kwargs):
+        emoji = getattr(instance, self.name)
+        if emoji:
+            emoji.delete()
+
+    def contribute_to_class(self, cls, name, private_only=False, **kwargs):
+        super(EmojiField, self).contribute_to_class(cls, name, private_only=private_only, **kwargs)
+        pre_delete.connect(self._reverse_cascade, sender=cls)
+
 
 class MessageField(DiscordField):
     _discord_cls = discord.Message
@@ -266,6 +275,16 @@ class ManyRolesField(ManyDiscordField):
 
 class ManyEmojisField(ManyDiscordField):
     _discord_cls = discord.Emoji
+
+    def _reverse_cascade(self, sender, instance, using, **kwargs):
+        emojis = getattr(instance, self.name)
+        if emojis is not None:
+            for emoji in emojis:
+                emoji.delete()
+
+    def contribute_to_class(self, cls, name, private_only=False, **kwargs):
+        super(ManyEmojisField, self).contribute_to_class(cls, name, private_only=private_only, **kwargs)
+        pre_delete.connect(self._reverse_cascade, sender=cls)
 
 
 class ManyMembersField(ManyDiscordField):
@@ -309,6 +328,8 @@ class LanguageField(CharField):
 class SeparatedValuesField(CharField):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('default', [])
+        self.converter = kwargs.pop('converter', None)
+        self.serializer = kwargs.pop('serializer', None)
         super().__init__(*args, **kwargs)
 
     def to_python(self, value):
@@ -316,11 +337,19 @@ class SeparatedValuesField(CharField):
             return []
         if isinstance(value, (tuple, list, set)):
             return value
-        return value.split(';')
+        ret = value.split(';')
+        if self.converter:
+            ret = [self.converter(value) for value in ret]
+        return ret
 
     def get_prep_value(self, value):
         if not value:
             return ''
+        if self.converter:
+            if self.serializer:
+                value = [self.serializer(_value) for _value in value]
+            else:
+                value = [str(_value) for _value in value]
         return ';'.join(value)
 
     def from_db_value(self, value, expression, connection):
