@@ -289,6 +289,10 @@ class DiscordModel(Model):
     def is_fetched(self):
         return self._discord_obj is not None
 
+    @property
+    def discord(self):
+        return self._discord_obj
+
     @async_using_db
     def async_delete(self, using=None, keep_parents=True):
         self.delete(using=using, keep_parents=keep_parents)
