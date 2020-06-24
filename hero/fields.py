@@ -8,6 +8,7 @@ from functools import partial
 
 import discord
 
+from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import (AutoField, BigIntegerField, BooleanField, CharField as _CharField,
                               CASCADE, DateField, DateTimeField, DecimalField, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
@@ -15,6 +16,7 @@ from django.db.models import (AutoField, BigIntegerField, BooleanField, CharFiel
                               SET_DEFAULT, SET_NULL, SmallIntegerField, TextField)
 from django.db.models.fields.related_descriptors import (ManyToManyDescriptor as _ManyToManyDescriptor,
                                                          ReverseManyToOneDescriptor as _ReverseManyToOneDescriptor,
+                                                         ForeignKeyDeferredAttribute as _ForeignKeyDeferredAttribute,
                                                          create_forward_many_to_many_manager,
                                                          create_reverse_many_to_one_manager)
 from django.db.models.fields.related import lazy_related_operation, create_many_to_many_intermediary_model
@@ -23,7 +25,15 @@ from django.utils.functional import cached_property
 
 from .i18n import Languages
 from .errors import InactiveUser
-from .utils import sync_to_async_threadsafe
+from .utils import async_using_db
+
+
+class ForeignKeyDeferredAttribute(_ForeignKeyDeferredAttribute):
+    def __get__(self, instance, cls=None):
+        try:
+            return super(ForeignKeyDeferredAttribute, self).__get__(instance, cls=cls)
+        except SynchronousOnlyOperation:
+            return async_using_db(super(ForeignKeyDeferredAttribute, self).__get__)(instance, cls=cls)
 
 
 # Make calls to related fields async
@@ -38,31 +48,31 @@ class ReverseManyToOneDescriptor(_ReverseManyToOneDescriptor):
             related_model._default_manager.__class__,
             self.rel,
         )):
-            @sync_to_async_threadsafe
-            def async_async_create(self, **kwargs):
+            @async_using_db
+            def async_create(self, **kwargs):
                 self.create(**kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_get_or_create(self, **kwargs):
                 self.get_or_create(**kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_update_or_create(self, **kwargs):
                 return self.update_or_create(**kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_clear(self, *, bulk=True):
                 self.clear(bulk=bulk)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_set(self, objs, *, bulk=True, clear=False):
                 return self.set(objs, bulk=bulk, clear=clear)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_remove(self, *args, **kwargs):
                 return self.remove(*args, **kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_add(self, *args, **kwargs):
                 return self.add(*args, **kwargs)
 
@@ -79,31 +89,31 @@ class ManyToManyDescriptor(_ManyToManyDescriptor):
             self.rel,
             reverse=self.reverse,
         )):
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_create(self, **kwargs):
                 self.create(**kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_get_or_create(self, *, through_defaults=None, **kwargs):
                 self.get_or_create(through_defaults=through_defaults, **kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_update_or_create(self, *, through_defaults=None, **kwargs):
                 return self.update_or_create(through_defaults=through_defaults, **kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_clear(self):
                 self.clear()
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_set(self, objs, *, clear=False, through_defaults=None):
                 return self.set(objs, clear=clear, through_defaults=through_defaults)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_remove(self, *args, **kwargs):
                 return self.remove(*args, **kwargs)
 
-            @sync_to_async_threadsafe
+            @async_using_db
             def async_add(self, *args, **kwargs):
                 return self.add(*args, **kwargs)
 
@@ -225,6 +235,10 @@ class RoleField(DiscordField):
 class EmojiField(DiscordField):
     _discord_cls = discord.Emoji
 
+    def __init__(self, *args, **kwargs):
+        self.reverse_cascade = kwargs.pop('reverse_cascade', True)
+        super(EmojiField, self).__init__(*args, **kwargs)
+
     def _reverse_cascade(self, sender, instance, using, **kwargs):
         emoji = getattr(instance, self.name)
         if emoji:
@@ -232,7 +246,8 @@ class EmojiField(DiscordField):
 
     def contribute_to_class(self, cls, name, private_only=False, **kwargs):
         super(EmojiField, self).contribute_to_class(cls, name, private_only=private_only, **kwargs)
-        pre_delete.connect(self._reverse_cascade, sender=cls)
+        if self.reverse_cascade:
+            pre_delete.connect(self._reverse_cascade, sender=cls)
 
 
 class MessageField(DiscordField):
@@ -276,6 +291,10 @@ class ManyRolesField(ManyDiscordField):
 class ManyEmojisField(ManyDiscordField):
     _discord_cls = discord.Emoji
 
+    def __init__(self, *args, **kwargs):
+        self.reverse_cascade = kwargs.pop('reverse_cascade', True)
+        super(ManyEmojisField, self).__init__(*args, **kwargs)
+
     def _reverse_cascade(self, sender, instance, using, **kwargs):
         emojis = getattr(instance, self.name)
         if emojis is not None:
@@ -284,7 +303,8 @@ class ManyEmojisField(ManyDiscordField):
 
     def contribute_to_class(self, cls, name, private_only=False, **kwargs):
         super(ManyEmojisField, self).contribute_to_class(cls, name, private_only=private_only, **kwargs)
-        pre_delete.connect(self._reverse_cascade, sender=cls)
+        if self.reverse_cascade:
+            pre_delete.connect(self._reverse_cascade, sender=cls)
 
 
 class ManyMembersField(ManyDiscordField):
