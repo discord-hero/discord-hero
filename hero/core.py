@@ -672,7 +672,6 @@ class Core(commands.Bot):
             else:
                 model_name = titlecaseify(model.name)
                 msg = f"Could not find {model_name}"
-            return
 
         # ignore all other exception types, but print them to stderr
         # and send it to ctx if in test mode
