@@ -36,7 +36,19 @@ def snakecaseify(s: str):
     s = re.sub(r"([A-Z]+)([A-Z][a-z])", r'\1_\2', s)
     s = re.sub(r"([a-z\d])([A-Z])", r'\1_\2', s)
     s = s.replace("-", "_")
+    s = s.replace(" ", "_")
     return s.lower()
+
+
+def titlecaseify(s: str):
+    # only supports snake_case, camelCase, PascalCase and SCREAMING_SNAKE_CASE
+    if '_' in s:
+        s = s.replace('_', ' ')
+    else:
+        s = s[0] + re.sub(r"([A-Z])", r' \1', s[1:])
+    # capitalize first letter (first letters in snake_case)
+    s = s.title()
+    return s
 
 
 def estimate_reading_time(text):
