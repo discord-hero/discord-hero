@@ -31,7 +31,7 @@ from .cache import get_cache
 from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist, ResponseTookTooLong
 from .cli import style
 from .db import Database
-from .utils import issubmodule
+from .utils import issubmodule, titlecaseify
 
 
 class CommandConflict(discord.ClientException):
@@ -625,7 +625,7 @@ class Core(commands.Bot):
             return
 
         if isinstance(error, ResponseTookTooLong):
-            await ctx.send("Response took too long.")
+            await ctx.send("Response took too long, aborting...")
             return
 
         if isinstance(error, commands.NoPrivateMessage):
@@ -666,12 +666,17 @@ class Core(commands.Bot):
             return
 
         if isinstance(error, ObjectDoesNotExist) and not hero.TEST:
-            await ctx.send(str(error))
+            model = error.model
+            if hasattr(model, 'NOT_FOUND_MESSAGE'):
+                msg = model.NOT_FOUND_MESSAGE
+            else:
+                model_name = titlecaseify(model.name)
+                msg = f"Could not find {model_name}"
             return
 
         # ignore all other exception types, but print them to stderr
         # and send it to ctx if in test mode
-        await ctx.send("An error occured while running the command **{0}**.".format(ctx.command))
+        await ctx.send(f"An error occured while running the command **{ctx.command}**.")
 
         if hero.TEST:
             await self.report_error(ctx, error)
@@ -679,13 +684,18 @@ class Core(commands.Bot):
         print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
         traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
-    async def report_error(self, ctx, error: BaseException):
+    async def report_error(self, ctx, error: BaseException, messageable=None):
+        if messageable is not None:
+            await messageable.send(f"An error occured while running the command **{ctx.command}**:")
         error_details = traceback.format_exception(type(error), error, error.__traceback__)
         paginator = commands.Paginator(prefix='```py')
         for line in error_details:
             paginator.add_line(line)
         for page in paginator.pages:
-            await ctx.send(page)
+            if messageable is not None:
+                await messageable.send(page)
+            else:
+                await ctx.send(page)
 
     @staticmethod
     async def send_gdpr(user, author=None, fallback_channel=None,

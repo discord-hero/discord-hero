@@ -10,8 +10,7 @@ import discord
 from discord.ext.commands import converter
 
 from django.conf import settings as django_settings
-from django.core.exceptions import NON_FIELD_ERRORS
-from django.db import connection, models as _models
+from django.db import models as _models
 from django.db.models import prefetch_related_objects
 from django.db.models.fields.reverse_related import ForeignObjectRel
 
@@ -148,6 +147,12 @@ class Model(_models.Model):
         abstract = True
         base_manager_name = 'objects'
         default_manager_name = 'custom_default_manager'
+
+    def __init_subclass__(cls):
+        if not cls._meta.abstract:
+            # make error handling much more simple
+            cls.DoesNotExist.model = cls
+            cls.MultipleObjectsReturned.model = cls
 
     objects: QuerySet = Manager()
     custom_default_manager = Manager()
