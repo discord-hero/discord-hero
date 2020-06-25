@@ -4,6 +4,7 @@
 :license: Apache-2.0 OR MIT
 """
 
+import asyncio
 from functools import partial
 
 import discord
@@ -16,6 +17,7 @@ from django.db.models import (AutoField, BigIntegerField, BooleanField, CharFiel
                               SET_DEFAULT, SET_NULL, SmallIntegerField, TextField)
 from django.db.models.fields.related_descriptors import (ManyToManyDescriptor as _ManyToManyDescriptor,
                                                          ReverseManyToOneDescriptor as _ReverseManyToOneDescriptor,
+                                                         ForwardManyToOneDescriptor as _ForwardManyToOneDescriptor,
                                                          ForeignKeyDeferredAttribute as _ForeignKeyDeferredAttribute,
                                                          create_forward_many_to_many_manager,
                                                          create_reverse_many_to_one_manager)
@@ -25,18 +27,48 @@ from django.utils.functional import cached_property
 
 from .i18n import Languages
 from .errors import InactiveUser
-from .utils import async_using_db
+from .utils import async_using_db, maybe_coroutine
 
 
 class ForeignKeyDeferredAttribute(_ForeignKeyDeferredAttribute):
     def __get__(self, instance, cls=None):
+        # make ForeignKeys compatible with asyncio
         try:
+            event_loop = asyncio.get_event_loop()
+        except RuntimeError:
             return super(ForeignKeyDeferredAttribute, self).__get__(instance, cls=cls)
-        except SynchronousOnlyOperation:
-            return async_using_db(super(ForeignKeyDeferredAttribute, self).__get__)(instance, cls=cls)
+        else:
+            if event_loop.is_running():
+                if self.field.is_cached(instance):
+                    # wrap cached value in coroutine so it will always have to be awaited
+                    # if accessed from an async context to make behavior more consistent
+                    return maybe_coroutine(super(ForeignKeyDeferredAttribute, self).__get__, instance, cls=cls)
+                else:
+                    return async_using_db(super(ForeignKeyDeferredAttribute, self).__get__)(instance, cls=cls)
+            return super(ForeignKeyDeferredAttribute, self).__get__(instance, cls=cls)
 
 
-# Make calls to related fields async
+class ForwardManyToOneDescriptor(_ForwardManyToOneDescriptor):
+    def __get__(self, instance, cls=None):
+        if instance is None:
+            return self
+
+        try:
+            event_loop = asyncio.get_event_loop()
+        except RuntimeError:
+            return super(ForwardManyToOneDescriptor, self).__get__(instance, cls=cls)
+        else:
+            if event_loop.is_running():
+                if self.field.is_cached(instance):
+                    # wrap cached value in coroutine so it will always have to be awaited
+                    # if accessed from an async context to make behavior more consistent
+                    return maybe_coroutine(super(ForwardManyToOneDescriptor, self).__get__, instance, cls=cls)
+                else:
+                    return async_using_db(super(ForwardManyToOneDescriptor, self).__get__)(instance, cls=cls)
+            return super(ForwardManyToOneDescriptor, self).__get__(instance, cls=cls)
+
+
+# Make calls to related fields' methods async
 # (kinda hacky since Django does not provide an
 # easy way to override the (Many)RelatedManager used)
 class ReverseManyToOneDescriptor(_ReverseManyToOneDescriptor):
@@ -121,7 +153,9 @@ class ManyToManyDescriptor(_ManyToManyDescriptor):
 
 
 class ForeignKey(_ForeignKey):
+    descriptor_class = ForeignKeyDeferredAttribute
     related_accessor_class = ReverseManyToOneDescriptor
+    forward_related_accessor_class = ForwardManyToOneDescriptor
 
 
 class ManyToManyField(_ManyToManyField):
