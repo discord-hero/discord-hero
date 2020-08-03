@@ -10,13 +10,5 @@ from .perms import Groups
 
 
 default_bot_permissions = {
-    'core': {
-        'help': {
-            Groups.EVERYONE: {
-                'allowed': True,
-                'times': 1,
-                'interval': 0.5
-            }
-        }
-    }
+    "core": {"help": {Groups.EVERYONE: {"allowed": True, "times": 1, "interval": 0.5}}}
 }

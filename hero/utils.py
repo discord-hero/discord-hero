@@ -29,12 +29,12 @@ def ismodelobject(obj, model_cls=None):
     # TODO check if model obj is instance of model_cls
     if model_cls is not None:
         return isinstance(obj, model_cls)
-    return hasattr(obj, '_meta')
+    return hasattr(obj, "_meta")
 
 
 def snakecaseify(s: str):
-    s = re.sub(r"([A-Z]+)([A-Z][a-z])", r'\1_\2', s)
-    s = re.sub(r"([a-z\d])([A-Z])", r'\1_\2', s)
+    s = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1_\2", s)
+    s = re.sub(r"([a-z\d])([A-Z])", r"\1_\2", s)
     s = s.replace("-", "_")
     s = s.replace(" ", "_")
     return s.lower()
@@ -42,10 +42,10 @@ def snakecaseify(s: str):
 
 def titlecaseify(s: str):
     # only supports snake_case, camelCase, PascalCase and SCREAMING_SNAKE_CASE
-    if '_' in s:
-        s = s.replace('_', ' ')
+    if "_" in s:
+        s = s.replace("_", " ")
     else:
-        s = s[0] + re.sub(r"([A-Z])", r' \1', s[1:])
+        s = s[0] + re.sub(r"([A-Z])", r" \1", s[1:])
     # capitalize first letter (first letters in snake_case)
     s = s.title()
     return s
@@ -109,16 +109,23 @@ def autorestart(delay_start=None, pause=None, restart_check=None):
                 else:
                     raise
                 # catch connection issues
-            except (OSError,
-                    HTTPException,
-                    GatewayNotFound,
-                    ConnectionClosed,
-                    aiohttp.ClientError,
-                    asyncio.TimeoutError,
-                    websockets.InvalidHandshake,
-                    websockets.WebSocketProtocolError) as e:
-                if any((isinstance(e, ConnectionClosed) and e.code == 1000,  # clean disconnect
-                        not isinstance(e, ConnectionClosed))):
+            except (
+                OSError,
+                HTTPException,
+                GatewayNotFound,
+                ConnectionClosed,
+                aiohttp.ClientError,
+                asyncio.TimeoutError,
+                websockets.InvalidHandshake,
+                websockets.WebSocketProtocolError,
+            ) as e:
+                if any(
+                    (
+                        isinstance(e, ConnectionClosed)
+                        and e.code == 1000,  # clean disconnect
+                        not isinstance(e, ConnectionClosed),
+                    )
+                ):
                     await wrapped(*args, **kwargs)
                 else:
                     raise

@@ -23,13 +23,17 @@ class Cog(_discord_cog.Cog):
         self.cache = hero.get_cache(self.extension.name)
         self.settings = core.get_settings(self.extension.name)
 
-        self.log = logging.Logger.with_default_handlers(name=f"hero.extensions.{self.qualified_name}",
-                                                        level=LogLevel.DEBUG if hero.TEST else LogLevel.INFO,
-                                                        loop=self.core.loop)
+        self.log = logging.Logger.with_default_handlers(
+            name=f"hero.extensions.{self.qualified_name}",
+            level=LogLevel.DEBUG if hero.TEST else LogLevel.INFO,
+            loop=self.core.loop,
+        )
 
     @property
     def bot(self):
-        warnings.warn("self.bot is deprecated; use self.core instead", DeprecationWarning)
+        warnings.warn(
+            "self.bot is deprecated; use self.core instead", DeprecationWarning
+        )
         return self.core
 
     @property
@@ -38,7 +42,7 @@ class Cog(_discord_cog.Cog):
 
     @property
     def qualified_name(self):
-        return f'{self.extension.name}.cogs.{self.name}'
+        return f"{self.extension.name}.cogs.{self.name}"
 
     @property
     def config(self):
@@ -53,7 +57,10 @@ class Cog(_discord_cog.Cog):
         # we've added so far for some form of atomic loading.
         for index, command in enumerate(self.__cog_commands__):
             command.cog = self
-            if not isinstance(command, GroupMixin) or command.name not in core.all_commands:
+            if (
+                not isinstance(command, GroupMixin)
+                or command.name not in core.all_commands
+            ):
                 try:
                     core.add_command(command)
                 except Exception as e:

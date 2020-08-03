@@ -11,7 +11,7 @@ class Strings:
     # TODO
     def __init__(self, extension):
         self.extension = extension
-        self.module = importlib.import_module('strings', f'hero.extensions.{extension}')
+        self.module = importlib.import_module("strings", f"hero.extensions.{extension}")
 
     def __getattr__(self, item):
         return getattr(self.module, item).format
@@ -21,7 +21,9 @@ setup_greeting = """discord-hero - First run configuration
 
 Insert your bot's token, or enter 'cancel' to cancel the setup:"""
 
-not_a_token = "Invalid input. Restart discord-hero and repeat the configuration process."
+not_a_token = (
+    "Invalid input. Restart discord-hero and repeat the configuration process."
+)
 
 choose_prefix = """Choose a prefix. A prefix is what you type before a command.
 A typical prefix would be the exclamation mark.
@@ -88,12 +90,16 @@ group_help = "{} command group"
 
 owner_recognized = "{} has been recognized and set as owner."
 
-one_user_is_not_registered = "At least one user is not registered; ask them to use `{}register`."
+one_user_is_not_registered = (
+    "At least one user is not registered; ask them to use `{}register`."
+)
 
-one_user_is_inactive = "{0}, at least one user, {1}, has opted out of using commands and features that " \
-                       "store data related to their Discord user ID, so this feature/command cannot be used " \
-                       "if it involves them. You can ask them to use `{2}register` again to reregister " \
-                       "them in my system so you can use the feature/command you wanted to use involving them."
+one_user_is_inactive = (
+    "{0}, at least one user, {1}, has opted out of using commands and features that "
+    "store data related to their Discord user ID, so this feature/command cannot be used "
+    "if it involves them. You can ask them to use `{2}register` again to reregister "
+    "them in my system so you can use the feature/command you wanted to use involving them."
+)
 
 user_not_registered = """{0}, thanks for your interest in using my features!
 I noticed that you wanted to use a feature that requires me to store data \
@@ -123,7 +129,9 @@ failed_to_install = "Failed to install '**{}**'."
 
 failed_to_update = "Failed to update '**{}**'."
 
-specify_extension_name = "Please specify a name for this extension (must be a valid Python package name)."
+specify_extension_name = (
+    "Please specify a name for this extension (must be a valid Python package name)."
+)
 
 skipping_this_extension = "Not installing this extension."
 
@@ -133,8 +141,11 @@ unsatisfied_dependencies = "Missing required extensions:"
 
 prompt_install_requirements = "Do you want to install the missing required packages?"
 
-would_be_uninstalled_too = str("Extensions that would be uninstalled as well "
-                               "as they depend on '**{}**':")
+would_be_uninstalled_too = str(
+    "Extensions that would be uninstalled as well " "as they depend on '**{}**':"
+)
 
-proceed_with_uninstallation = str("Do you want to proceed? This will uninstall "
-                                  "the above listed extensions. (yes/no)")
+proceed_with_uninstallation = str(
+    "Do you want to proceed? This will uninstall "
+    "the above listed extensions. (yes/no)"
+)

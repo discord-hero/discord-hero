@@ -43,7 +43,7 @@ class Essentials(hero.Cog):
         t_1 = time.perf_counter()
         await ctx.trigger_typing()
         t_2 = time.perf_counter()
-        time_delta = round((t_2-t_1)*1000)
+        time_delta = round((t_2 - t_1) * 1000)
         await ctx.send("Pong.\nTime: {}ms".format(time_delta))
 
     # GDPR
@@ -67,10 +67,12 @@ class Essentials(hero.Cog):
             user.is_active = True
             await user.async_save()
 
-        await ctx.send(f"You are now registered. Thank you for using my commands and functions!\n\n"
-                       f"If you ever change your mind, just use `{ctx.prefix}unregister` to "
-                       f"remove yourself from my system, which will irreversibly and immediately "
-                       f"delete all data related to your Discord ID from my system.")
+        await ctx.send(
+            f"You are now registered. Thank you for using my commands and functions!\n\n"
+            f"If you ever change your mind, just use `{ctx.prefix}unregister` to "
+            f"remove yourself from my system, which will irreversibly and immediately "
+            f"delete all data related to your Discord ID from my system."
+        )
 
     # GDPR
     @hero.command()
@@ -91,9 +93,11 @@ class Essentials(hero.Cog):
         except InactiveUser:
             await ctx.send("You are already unregistered!")
             return
-        await ctx.send(f"You have been successfully removed from my system! You will have to use "
-                       f"`{ctx.prefix}register` if you change your mind to enable storing data "
-                       f"related to your Discord user ID again.")
+        await ctx.send(
+            f"You have been successfully removed from my system! You will have to use "
+            f"`{ctx.prefix}register` if you change your mind to enable storing data "
+            f"related to your Discord user ID again."
+        )
 
     @hero.listener()
     async def on_raw_reaction_add(self, payload: RawReactionActionEvent):
@@ -104,7 +108,11 @@ class Essentials(hero.Cog):
         channel_id = payload.channel_id
 
         # obligatory checks for efficiency
-        if user_id == self.core.user.id or emoji.is_custom_emoji() or emoji.name != self.core.YES_EMOJI:
+        if (
+            user_id == self.core.user.id
+            or emoji.is_custom_emoji()
+            or emoji.name != self.core.YES_EMOJI
+        ):
             return
 
         # check if message is user's register_message
@@ -127,11 +135,19 @@ class Essentials(hero.Cog):
             if guild is not None:
                 channel = guild.get_channel(channel_id)
 
-        message_text = "{user}, you have now been registered! Remember, you can use " \
-                       "`{prefix}unregister` to immediately delete all data related to " \
-                       "your Discord ID from my system."
+        message_text = (
+            "{user}, you have now been registered! Remember, you can use "
+            "`{prefix}unregister` to immediately delete all data related to "
+            "your Discord ID from my system."
+        )
         try:
-            await user.send(message_text.format(user=user.name, prefix=self.core.default_prefix))
+            await user.send(
+                message_text.format(user=user.name, prefix=self.core.default_prefix)
+            )
         except discord.Forbidden:
             if channel is not None:
-                await channel.send(message_text.format(user=user.mention, prefix=self.core.default_prefix))
+                await channel.send(
+                    message_text.format(
+                        user=user.mention, prefix=self.core.default_prefix
+                    )
+                )

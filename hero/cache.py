@@ -14,20 +14,20 @@ from .errors import ConfigurationError
 
 def get_cache(namespace=None):
     if namespace is None:
-        return aiocache.caches.get('default')
+        return aiocache.caches.get("default")
 
     try:
         return aiocache.caches.get(namespace)
     except KeyError:
         pass
 
-    _cache_config = aiocache.caches.get_alias_config('default')
-    base_namespace = _cache_config['namespace']
+    _cache_config = aiocache.caches.get_alias_config("default")
+    base_namespace = _cache_config["namespace"]
     if not base_namespace:
         actual_namespace = namespace
     else:
-        actual_namespace = '_'.join((base_namespace, namespace))
-    _cache_config['namespace'] = actual_namespace
+        actual_namespace = "_".join((base_namespace, namespace))
+    _cache_config["namespace"] = actual_namespace
     aiocache.caches.add(namespace, _cache_config)
     return aiocache.caches.get(namespace)
 
@@ -52,11 +52,12 @@ class Cache:
     :ivar core:
         The core.
     """
+
     def __init__(self, extension=None, core=None, loop=None):
         self.backend = get_cache(extension)
         self.extension = extension
         self.bot = core
-        if loop is None and self.bot is not None and hasattr(self.bot, 'loop'):
+        if loop is None and self.bot is not None and hasattr(self.bot, "loop"):
             self.loop = self.bot.loop
         else:
             self.loop = loop
@@ -98,39 +99,39 @@ def cached(expire_after=None, key=None, include_self=True):
             return 1 + 1
     """
     # TODO check parameter for custom validity/integrity checks
-    return aiocache.cached(key=key, ttl=expire_after, alias='default', noself=not include_self)
+    return aiocache.cached(
+        key=key, ttl=expire_after, alias="default", noself=not include_self
+    )
 
 
 def init():
-    cache_type = os.getenv('CACHE_TYPE')
-    if cache_type == 'simple':
+    cache_type = os.getenv("CACHE_TYPE")
+    if cache_type == "simple":
         _cache_config = {
-            'default': {
-                'cache': 'aiocache.SimpleMemoryCache',
-                'namespace': 'hero',
-                'serializer': {
-                    'class': 'aiocache.serializers.PickleSerializer'
-                }
+            "default": {
+                "cache": "aiocache.SimpleMemoryCache",
+                "namespace": "hero",
+                "serializer": {"class": "aiocache.serializers.PickleSerializer"},
             }
         }
-    elif cache_type == 'redis':
+    elif cache_type == "redis":
         _cache_config = {
-            'default': {
-                'cache': 'aiocache.RedisCache',
-                'endpoint': os.getenv('CACHE_HOST'),
-                'port': os.getenv('CACHE_PORT'),
-                'password': os.getenv('CACHE_PASSWORD'),
-                'db': os.getenv('CACHE_DB'),
-                'namespace': 'hero_' + os.getenv('NAMESPACE'),
-                'pool_min_size': 1,
-                'pool_max_size': 10,
-                'serializer': {
-                    'class': 'aiocache.serializers.PickleSerializer'
-                }
+            "default": {
+                "cache": "aiocache.RedisCache",
+                "endpoint": os.getenv("CACHE_HOST"),
+                "port": os.getenv("CACHE_PORT"),
+                "password": os.getenv("CACHE_PASSWORD"),
+                "db": os.getenv("CACHE_DB"),
+                "namespace": "hero_" + os.getenv("NAMESPACE"),
+                "pool_min_size": 1,
+                "pool_max_size": 10,
+                "serializer": {"class": "aiocache.serializers.PickleSerializer"},
             }
         }
     else:
-        raise ConfigurationError("The configuration uses an unsupported cache backend: "
-                                 "{}".format(os.getenv('CACHE_TYPE')))
+        raise ConfigurationError(
+            "The configuration uses an unsupported cache backend: "
+            "{}".format(os.getenv("CACHE_TYPE"))
+        )
 
     aiocache.caches.set_config(_cache_config)

@@ -1,7 +1,12 @@
 import asyncio
 import functools
 
-from discord.ext.commands import Group as _Group, Command as _Command, CommandError, CommandInvokeError
+from discord.ext.commands import (
+    Group as _Group,
+    Command as _Command,
+    CommandError,
+    CommandInvokeError,
+)
 
 
 def hooked_wrapped_callback(_command, ctx, coro):
@@ -24,6 +29,7 @@ def hooked_wrapped_callback(_command, ctx, coro):
 
             await _command.call_after_hooks(ctx)
         return ret
+
     return wrapped
 
 
@@ -37,7 +43,7 @@ def command(name=None, cls=None, **attrs):
 
     def decorator(func):
         if isinstance(func, Command):
-            raise TypeError('Callback is already a command.')
+            raise TypeError("Callback is already a command.")
         return cls(func, name=name, **attrs)
 
     return decorator
@@ -57,7 +63,9 @@ class Group(_Group):
 
         if trigger:
             ctx.subcommand_passed = trigger
-            ctx.invoked_subcommand = self.all_commands.get('_'.join((self.qualified_name, trigger)), None)
+            ctx.invoked_subcommand = self.all_commands.get(
+                "_".join((self.qualified_name, trigger)), None
+            )
 
         if early_invoke:
             injected = hooked_wrapped_callback(self, ctx, self.callback)
@@ -89,7 +97,9 @@ class Group(_Group):
 
         if trigger:
             ctx.subcommand_passed = trigger
-            ctx.invoked_subcommand = self.all_commands.get('_'.join((self.qualified_name, trigger)), None)
+            ctx.invoked_subcommand = self.all_commands.get(
+                "_".join((self.qualified_name, trigger)), None
+            )
 
         if early_invoke:
             try:
@@ -112,5 +122,5 @@ class Group(_Group):
 
 
 def group(name=None, **attrs):
-    attrs.setdefault('cls', Group)
+    attrs.setdefault("cls", Group)
     return command(name=name, **attrs)

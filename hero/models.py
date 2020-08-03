@@ -17,6 +17,7 @@ from django.db.models.fields.reverse_related import ForeignObjectRel
 import hero
 from hero import fields
 from .errors import InactiveUser, UserDoesNotExist
+
 # temporary fix until Django's ORM is async
 from .utils import async_using_db
 
@@ -25,86 +26,103 @@ class QuerySet(_models.QuerySet):
     @async_using_db
     def async_get(self, *args, **kwargs):
         return super(QuerySet, self).get(*args, **kwargs)
+
     async_get.__doc__ = _models.QuerySet.get.__doc__
 
     @async_using_db
     def async_create(self, **kwargs):
         return super(QuerySet, self).create(**kwargs)
+
     async_create.__doc__ = _models.QuerySet.create.__doc__
 
     @async_using_db
     def async_get_or_create(self, *args, **kwargs):
         return super(QuerySet, self).get_or_create(*args, **kwargs)
+
     async_get_or_create.__doc__ = _models.QuerySet.get_or_create.__doc__
 
     @async_using_db
     def async_update_or_create(self, *args, **kwargs):
         return super(QuerySet, self).update_or_create(*args, **kwargs)
+
     async_update_or_create.__doc__ = _models.QuerySet.update_or_create.__doc__
 
     @async_using_db
     def async_bulk_create(self, *args, **kwargs):
         return super(QuerySet, self).bulk_create(*args, **kwargs)
+
     async_bulk_create.__doc__ = _models.QuerySet.bulk_create.__doc__
 
     @async_using_db
     def async_bulk_update(self, *args, **kwargs):
         return super(QuerySet, self).bulk_update(*args, **kwargs)
+
     async_bulk_update.__doc__ = _models.QuerySet.bulk_update.__doc__
 
     @async_using_db
     def async_count(self):
         return super(QuerySet, self).count()
+
     async_count.__doc__ = _models.QuerySet.count.__doc__
 
     @async_using_db
     def async_in_bulk(self, *args, **kwargs):
         return super(QuerySet, self).in_bulk(*args, **kwargs)
+
     async_in_bulk.__doc__ = _models.QuerySet.in_bulk.__doc__
 
     @async_using_db
     def async_iterator(self, *args, **kwargs):
         return super(QuerySet, self).iterator(*args, **kwargs)
+
     async_iterator.__doc__ = _models.QuerySet.iterator.__doc__
 
     @async_using_db
     def async_latest(self, *args):
         return super(QuerySet, self).latest(*args)
+
     async_latest.__doc__ = _models.QuerySet.latest.__doc__
 
     @async_using_db
     def async_earliest(self, *args):
         return super(QuerySet, self).earliest(*args)
+
     async_earliest.__doc__ = _models.QuerySet.earliest.__doc__
 
     @async_using_db
     def async_first(self):
         return super(QuerySet, self).first()
+
     async_first.__doc__ = _models.QuerySet.first.__doc__
 
     @async_using_db
     def async_last(self):
         return super(QuerySet, self).last()
+
     async_last.__doc__ = _models.QuerySet.last.__doc__
 
     @async_using_db
     def async_aggregate(self, *args, **kwargs):
         return super(QuerySet, self).aggregate(*args, **kwargs)
+
     async_aggregate.__doc__ = _models.QuerySet.aggregate.__doc__
 
     @async_using_db
     def async_exists(self):
         return super(QuerySet, self).exists()
+
     async_exists.__doc__ = _models.QuerySet.exists.__doc__
 
     @async_using_db
     def async_update(self, **kwargs):
         return super(QuerySet, self).update(**kwargs)
+
     async_update.__doc__ = _models.QuerySet.update.__doc__
 
     @async_using_db
     def async_delete(self):
         return super(QuerySet, self).delete()
+
     async_delete.__doc__ = _models.QuerySet.delete.__doc__
 
 
@@ -115,6 +133,7 @@ class BaseManager(_models.manager.BaseManager):
         def create_method(name, method):
             def manager_method(self, *args, **kwargs):
                 return getattr(self.get_queryset(), name)(*args, **kwargs)
+
             # support SyncToAsync
             try:
                 manager_method.__name__ = method.__name__
@@ -130,8 +149,8 @@ class BaseManager(_models.manager.BaseManager):
             if hasattr(cls, name):
                 continue
             # Only copy public methods or methods with the attribute `queryset_only=False`.
-            queryset_only = getattr(method, 'queryset_only', None)
-            if queryset_only or (queryset_only is None and name.startswith('_')):
+            queryset_only = getattr(method, "queryset_only", None)
+            if queryset_only or (queryset_only is None and name.startswith("_")):
                 continue
             # Copy the method onto the manager.
             new_methods[name] = create_method(name, method)
@@ -145,8 +164,8 @@ class Manager(BaseManager.from_queryset(QuerySet)):
 class Model(_models.Model):
     class Meta:
         abstract = True
-        base_manager_name = 'objects'
-        default_manager_name = 'custom_default_manager'
+        base_manager_name = "objects"
+        default_manager_name = "custom_default_manager"
 
     def __init_subclass__(cls):
         if not cls._meta.abstract:
@@ -170,7 +189,7 @@ class Model(_models.Model):
 
     @property
     def _extension(self):
-        if self._meta.app_label == 'hero':
+        if self._meta.app_label == "hero":
             return None
         return self._core.__extensions[self._meta.app_label]
 
@@ -186,8 +205,16 @@ class Model(_models.Model):
         self.refresh_from_db()
         if prefetch_related is not False:
             if prefetch_related is True:
-                prefetch_related_objects((self,), *tuple((f.get_attname() + '_set' for f in self._meta.fields
-                                                          if isinstance(f, ForeignObjectRel))))
+                prefetch_related_objects(
+                    (self,),
+                    *tuple(
+                        (
+                            f.get_attname() + "_set"
+                            for f in self._meta.fields
+                            if isinstance(f, ForeignObjectRel)
+                        )
+                    ),
+                )
             elif prefetch_related is None:
                 self.objects.prefetch_related((None,))
             else:
@@ -248,7 +275,7 @@ class Model(_models.Model):
 
 class CoreSettings(Model):
     name = fields.CharField(primary_key=True, max_length=64)
-    prefixes = fields.SeparatedValuesField(max_length=256, default=['!'])
+    prefixes = fields.SeparatedValuesField(max_length=256, default=["!"])
     description = fields.TextField(max_length=512, blank=True, null=True)
     status = fields.CharField(max_length=128, blank=True, null=True)
     lang = fields.LanguageField()
@@ -273,8 +300,10 @@ class DiscordModel(Model):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         obj, created = cls.objects.get_or_create(id=discord_obj.id)
         obj._discord_obj = discord_obj
         return obj, not created
@@ -309,7 +338,9 @@ class DiscordModel(Model):
         if hasattr(self._discord_obj, name):
             return getattr(self._discord_obj, name)
         else:
-            raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{name}'"
+            )
 
     def __str__(self):
         if self.is_fetched:
@@ -331,7 +362,9 @@ class User(DiscordModel):
     id = fields.BigIntegerField(primary_key=True)
     is_staff = fields.BooleanField(default=False, db_index=True)
     is_active = fields.BooleanField(default=True, db_index=True)
-    register_message = fields.MessageField(blank=True, null=True, on_delete=fields.SET_NULL)
+    register_message = fields.MessageField(
+        blank=True, null=True, on_delete=fields.SET_NULL
+    )
     language = fields.LanguageField()
 
     _discord_cls = discord.User
@@ -341,8 +374,10 @@ class User(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, (cls._discord_cls, discord.ClientUser)):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         if discord_obj.bot and discord_obj.id != discord_obj._state.user.id:
             raise ValueError("Bot users cannot be stored in the database")
         qs = cls.objects.filter(id=discord_obj.id)
@@ -400,8 +435,10 @@ class Guild(DiscordModel):
     invite_code = fields.CharField(null=True, blank=True, max_length=64, db_index=True)
     prefix = fields.CharField(null=True, blank=True, max_length=64)
     language = fields.LanguageField()
-    members = fields.ManyToManyField(to='User', through='Member')
-    moderating_guild = fields.GuildField(null=True, blank=True, on_delete=fields.SET_NULL)
+    members = fields.ManyToManyField(to="User", through="Member")
+    moderating_guild = fields.GuildField(
+        null=True, blank=True, on_delete=fields.SET_NULL
+    )
 
     _discord_cls = discord.Guild
 
@@ -409,20 +446,20 @@ class Guild(DiscordModel):
     def invite_url(self):
         if self.invite_code is None:
             return None
-        return f'https://discord.gg/{self.invite_code}'
+        return f"https://discord.gg/{self.invite_code}"
 
     @invite_url.setter
     def invite_url(self, value: str):
         if not isinstance(value, str):
             raise TypeError("invite_url must be a str")
         try:
-            self.invite_code = value.split('://discord.gg/')[1]
+            self.invite_code = value.split("://discord.gg/")[1]
         except IndexError:
             try:
-                self.invite_code = value.split('://discordapp.com/invite/')[1]
+                self.invite_code = value.split("://discordapp.com/invite/")[1]
             except IndexError:
                 try:
-                    self.invite_code = value.split('://discord.com/invite/')[1]
+                    self.invite_code = value.split("://discord.com/invite/")[1]
                 except IndexError:
                     raise ValueError("Not a valid invite URL.")
 
@@ -437,7 +474,9 @@ class Guild(DiscordModel):
 class TextChannel(DiscordModel):
     # can also be a DMChannel
     id = fields.BigIntegerField(primary_key=True)
-    guild = fields.GuildField(db_index=True, null=True, blank=True, on_delete=fields.CASCADE)
+    guild = fields.GuildField(
+        db_index=True, null=True, blank=True, on_delete=fields.CASCADE
+    )
     is_dm = fields.BooleanField(default=False)
     language = fields.LanguageField()
 
@@ -451,9 +490,11 @@ class TextChannel(DiscordModel):
             if isinstance(discord_obj, discord.DMChannel):
                 is_dm = True
             else:
-                raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                                f"or a discord.DMChannel "
-                                f"but a {type(discord_obj).__name__} was passed")
+                raise TypeError(
+                    f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                    f"or a discord.DMChannel "
+                    f"but a {type(discord_obj).__name__} was passed"
+                )
         else:
             is_dm = False
 
@@ -461,7 +502,9 @@ class TextChannel(DiscordModel):
             obj, created = cls.objects.get_or_create(id=discord_obj.id, is_dm=True)
         else:
             guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-            obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild, is_dm=False)
+            obj, created = cls.objects.get_or_create(
+                id=discord_obj.id, guild=guild, is_dm=False
+            )
 
         obj._discord_obj = discord_obj
         return obj, not created
@@ -495,8 +538,10 @@ class VoiceChannel(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
         obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
         obj._discord_obj = discord_obj
@@ -523,8 +568,10 @@ class CategoryChannel(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
         obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
         obj._discord_obj = discord_obj
@@ -551,8 +598,10 @@ class Role(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
         obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
         obj._discord_obj = discord_obj
@@ -581,12 +630,18 @@ class Emoji(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, (cls._discord_cls, discord.Emoji)):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"or discord.Emoji"
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                f"or discord.Emoji"
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         if isinstance(discord_obj, discord.Emoji):
-            discord_obj = discord.PartialEmoji(name=discord_obj.name, animated=discord_obj.animated, id=discord_obj.id)
-        obj, created = cls.objects.get_or_create(id=discord_obj.id, name=discord_obj.name, animated=discord_obj.animated)
+            discord_obj = discord.PartialEmoji(
+                name=discord_obj.name, animated=discord_obj.animated, id=discord_obj.id
+            )
+        obj, created = cls.objects.get_or_create(
+            id=discord_obj.id, name=discord_obj.name, animated=discord_obj.animated
+        )
         obj._discord_obj = discord_obj
         return obj, not created
 
@@ -596,7 +651,9 @@ class Emoji(DiscordModel):
                 await self.guild.fetch()
             self.guild: discord.Guild
             emoji = await self.guild.fetch_emoji(self.id)
-            discord_emoji = discord.PartialEmoji(name=emoji.name, animated=emoji.animated, id=emoji.id)
+            discord_emoji = discord.PartialEmoji(
+                name=emoji.name, animated=emoji.animated, id=emoji.id
+            )
             if self.name != emoji.name:
                 self.name = emoji.name
                 await self.async_save()
@@ -609,7 +666,7 @@ class Emoji(DiscordModel):
 
 class Member(DiscordModel):
     class Meta:
-        unique_together = (('user', 'guild'),)
+        unique_together = (("user", "guild"),)
 
     auto_id = _models.BigAutoField(primary_key=True)
     user = fields.UserField(db_index=True, on_delete=fields.CASCADE)
@@ -619,8 +676,8 @@ class Member(DiscordModel):
     _discord_converter_cls = converter.MemberConverter
 
     def __getattr__(self, name):
-        if name == 'id':
-            _discord_obj = getattr(self, '_discord_obj', None)
+        if name == "id":
+            _discord_obj = getattr(self, "_discord_obj", None)
             if _discord_obj is not None:
                 return self._discord_obj.id
         return super().__getattr__(name)
@@ -629,8 +686,10 @@ class Member(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, discord.Member):
-            raise TypeError(f"discord_obj has to be a discord.Member "
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.Member "
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         _user, _ = User.sync_from_discord_obj(discord_obj._user)
         _guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
         # workaround for the nonexistence of composite primary keys in Django
@@ -679,15 +738,19 @@ class Message(DiscordModel):
     def sync_from_discord_obj(cls, discord_obj):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
-            raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
-                            f"but a {type(discord_obj).__name__} was passed")
+            raise TypeError(
+                f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
+                f"but a {type(discord_obj).__name__} was passed"
+            )
         channel, _ = TextChannel.sync_from_discord_obj(discord_obj.channel)
         if discord_obj.guild:
             user = discord_obj.author._user
         else:
             user = discord_obj.author
         author, _ = User.sync_from_discord_obj(user)
-        obj, created = cls.objects.get_or_create(id=discord_obj.id, channel=channel, author=author)
+        obj, created = cls.objects.get_or_create(
+            id=discord_obj.id, channel=channel, author=author
+        )
         obj._discord_obj = discord_obj
         return obj, not created
 

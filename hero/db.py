@@ -14,8 +14,18 @@ class Database:
     def __init__(self, core):
         self.core = core
 
-        from hero.models import (User, Guild, TextChannel, VoiceChannel,
-                                 CategoryChannel, Role, Emoji, Member, Message)
+        from hero.models import (
+            User,
+            Guild,
+            TextChannel,
+            VoiceChannel,
+            CategoryChannel,
+            Role,
+            Emoji,
+            Member,
+            Message,
+        )
+
         self._model_map = {
             discord.User: User,
             discord.Guild: Guild,
@@ -26,13 +36,16 @@ class Database:
             discord.Emoji: Emoji,
             discord.PartialEmoji: Emoji,
             discord.Member: Member,
-            discord.Message: Message
+            discord.Message: Message,
         }
         self._models = tuple(self._model_map.values())
         self._discord_classes = tuple(self._model_map.keys())
 
     async def load(self, discord_obj):
-        warnings.warn("Database.load is deprecated; use Database.wrap_{} methods instead", DeprecationWarning)
+        warnings.warn(
+            "Database.load is deprecated; use Database.wrap_{} methods instead",
+            DeprecationWarning,
+        )
         obj, existed_already = await self._load(discord_obj)
         return obj, existed_already
 

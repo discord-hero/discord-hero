@@ -11,9 +11,12 @@ sphinxcontrib-trio = "*"
 pytest = "*"
 pytest-asyncio = "*"
 pytest-cov = "*"
-
-[packages]
-discord-hero = {editable = true, path = ".", extras = ['redis', 'postgresql']}
+pre-commit = "*"
 
 [pipenv]
 allow_prereleases = true
+
+[packages.discord-hero]
+editable = true
+path = "."
+extras = [ "redis", "postgresql",]
