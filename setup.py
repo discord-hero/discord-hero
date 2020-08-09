@@ -24,6 +24,7 @@ requirements = [
     "click",
     "aiologger",
     "aiofiles",
+    "websockets",
     "python-dotenv",
     "colorama; sys_platform == 'win32'",
     "uvloop; sys_platform != 'win32' and implementation_name == 'cpython'",
