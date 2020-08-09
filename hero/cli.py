@@ -12,7 +12,7 @@ from click import (argument, option, prompt, confirm, echo, echo_via_pager, styl
 from dotenv import load_dotenv
 
 import hero
-from .main import main
+from .main import main, database_initialization
 
 
 def load_correct_dotenv(ctx, param, is_test):
@@ -40,12 +40,18 @@ def load_correct_dotenv(ctx, param, is_test):
 @click.option('--cache-host', default=lambda: os.getenv('CACHE_HOST'))
 @click.option('--cache-port', default=lambda: os.getenv('CACHE_PORT'))
 @click.option('--cache-password', default=lambda: os.getenv('CACHE_PASSWORD'))
-def main_cli(test, namespace, db_type, db_name, db_user, db_password, db_host, db_port,
+@click.pass_context
+def main_cli(ctx, test, namespace, db_type, db_name, db_user, db_password, db_host, db_port,
              cache_type, cache_host, cache_port, cache_password):
-    main(test=not test, namespace=namespace, db_type=db_type, db_name=db_name, db_user=db_user,
-         db_password=db_password, db_host=db_host, db_port=db_port, cache_type=cache_type,
-         cache_host=cache_host, cache_port=cache_port, cache_password=cache_password)
+    if ctx.invoked_subcommand is None:
+        main(test=not test, namespace=namespace, db_type=db_type, db_name=db_name, db_user=db_user,
+            db_password=db_password, db_host=db_host, db_port=db_port, cache_type=cache_type,
+            cache_host=cache_host, cache_port=cache_port, cache_password=cache_password)
 
+@main_cli.command()
+@click.option('-t/-p', '--test/--prod', callback=load_correct_dotenv, default=True)
+def dbinit(test):
+    database_initialization(test=not test)
 
 command = main_cli.command
 group = main_cli.group
