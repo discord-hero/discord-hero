@@ -704,6 +704,12 @@ class Message(DiscordModel):
         discord_message = await channel_obj.fetch_message(self.id)
         self._discord_obj = discord_message
         return discord_message
+    
+    def __str__(self):
+        if self.is_fetched:
+            return self.content
+        else:
+            return str(self.id)
 
 
 class Settings(Model):
