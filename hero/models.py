@@ -479,8 +479,9 @@ class TextChannel(DiscordModel):
         if discord_text_channel is None:
             discord_text_channel = await self._core.fetch_channel(self.id)
         self._discord_obj = discord_text_channel
-        if not self.is_dm and not self.guild.is_fetched:
-            await self.guild.fetch()
+        guild_obj = await self.guild
+        if not self.is_dm and not guild_obj.is_fetched:
+            await guild_obj.fetch()
         return discord_text_channel
 
 
@@ -507,8 +508,9 @@ class VoiceChannel(DiscordModel):
         if discord_voice_channel is None:
             discord_voice_channel = await self._core.fetch_channel(self.id)
         self._discord_obj = discord_voice_channel
-        if not self.guild.is_fetched:
-            await self.guild.fetch()
+        guild_obj = await self.guild
+        if not guild_obj.is_fetched:
+            await guild_obj.fetch()
         return discord_voice_channel
 
 
@@ -535,8 +537,9 @@ class CategoryChannel(DiscordModel):
         if discord_category_channel is None:
             discord_category_channel = await self._core.fetch_channel(self.id)
         self._discord_obj = discord_category_channel
-        if not self.guild.is_fetched:
-            await self.guild.fetch()
+        guild_obj = await self.guild
+        if not guild_obj.is_fetched:
+            await guild_obj.fetch()
         return discord_category_channel
 
 
@@ -559,9 +562,10 @@ class Role(DiscordModel):
         return obj, not created
 
     async def fetch(self) -> discord.Role:
-        if not self.guild.is_fetched:
-            await self.guild.fetch()
-        discord_role = self.guild.get_role(self.id)
+        guild_obj = await self.guild
+        if not guild_obj.is_fetched:
+            await guild_obj.fetch()
+        discord_role = guild_obj.get_role(self.id)
         if discord_role is None:
             discord_role = await self.guild.fetch_role(self.id)
         self._discord_obj = discord_role
@@ -592,8 +596,9 @@ class Emoji(DiscordModel):
 
     async def fetch(self) -> discord.PartialEmoji:
         if self.is_custom:
-            if not self.guild.is_fetched:
-                await self.guild.fetch()
+            guild_obj = await self.guild
+            if not guild_obj.is_fetched:
+                await guild_obj.fetch()
             self.guild: discord.Guild
             emoji = await self.guild.fetch_emoji(self.id)
             discord_emoji = discord.PartialEmoji(name=emoji.name, animated=emoji.animated, id=emoji.id)
@@ -646,9 +651,10 @@ class Member(DiscordModel):
         return obj, existed_already
 
     async def fetch(self) -> discord.Member:
-        if not self.guild.is_fetched:
-            await self.guild.fetch()
-        discord_member = self.guild.get_member(self.id)
+        guild_obj = await self.guild
+        if not guild_obj.is_fetched:
+            await guild_obj.fetch()
+        discord_member = guild_obj.get_member(self.id)
         if discord_member is None:
             discord_member = await self.guild.fetch_member(self.id)
         self._discord_obj = discord_member
@@ -692,9 +698,10 @@ class Message(DiscordModel):
         return obj, not created
 
     async def fetch(self) -> discord.Message:
-        if not self.channel.is_fetched:
-            await self.channel.fetch()
-        discord_message = self.channel.get_message(self.id)
+        channel_obj = await self.channel
+        if not channel_obj.is_fetched:
+            await channel_obj.fetch()
+        discord_message = channel_obj.get_message(self.id)
         if discord_message is None:
             discord_message = await self.channel.fetch_message(self.id)
         self._discord_obj = discord_message
