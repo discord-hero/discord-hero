@@ -707,7 +707,7 @@ class Message(DiscordModel):
     
     def __str__(self):
         if self.is_fetched:
-            return self.content
+            return self._discord_obj.content
         else:
             return str(self.id)
 
