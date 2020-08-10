@@ -567,7 +567,7 @@ class Role(DiscordModel):
             await guild_obj.fetch()
         discord_role = guild_obj.get_role(self.id)
         if discord_role is None:
-            discord_role = await self.guild.fetch_role(self.id)
+            discord_role = await guild_obj.fetch_role(self.id)
         self._discord_obj = discord_role
         return discord_role
 
@@ -600,7 +600,7 @@ class Emoji(DiscordModel):
             if not guild_obj.is_fetched:
                 await guild_obj.fetch()
             self.guild: discord.Guild
-            emoji = await self.guild.fetch_emoji(self.id)
+            emoji = await guild_obj.fetch_emoji(self.id)
             discord_emoji = discord.PartialEmoji(name=emoji.name, animated=emoji.animated, id=emoji.id)
             if self.name != emoji.name:
                 self.name = emoji.name
@@ -701,9 +701,7 @@ class Message(DiscordModel):
         channel_obj = await self.channel
         if not channel_obj.is_fetched:
             await channel_obj.fetch()
-        discord_message = channel_obj.get_message(self.id)
-        if discord_message is None:
-            discord_message = await self.channel.fetch_message(self.id)
+        discord_message = await channel_obj.fetch_message(self.id)
         self._discord_obj = discord_message
         return discord_message
 
