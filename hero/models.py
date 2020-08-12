@@ -656,10 +656,11 @@ class Member(DiscordModel):
             await guild_obj.fetch()
         discord_member = guild_obj.get_member(self.id)
         if discord_member is None:
-            discord_member = await self.guild.fetch_member(self.id)
+            discord_member = await guild_obj.fetch_member(self.id)
         self._discord_obj = discord_member
-        if not self.user.is_fetched:
-            self.user._discord_obj = discord_member.user
+        user_obj = await self.user
+        if not user_obj.is_fetched:
+            user_obj._discord_obj = discord_member.user
         return discord_member
 
 
@@ -673,13 +674,15 @@ class Message(DiscordModel):
 
     @property
     def guild(self):
-        return self.channel.guild
+        channel_obj = await self.channel
+        return channel_obj.guild
 
     @guild.setter
     def guild(self, value):
-        if self.channel.is_dm:
+        channel_obj = await self.channel
+        if channel_obj.is_dm:
             raise AttributeError("Cannot set guild of private message")
-        self.channel.guild = value
+        channel_obj.guild = value
 
     @classmethod
     def sync_from_discord_obj(cls, discord_obj):
