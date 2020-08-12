@@ -369,8 +369,7 @@ class User(DiscordModel):
     @async_using_db
     def async_load(self, prefetch_related=True):
         self.load(prefetch_related=prefetch_related)
-        if not self.is_active:
-            raise InactiveUser(f"The user {self.id} is inactive")
+
 
     def load(self, prefetch_related=True):
         super().load(prefetch_related=True)
