@@ -386,7 +386,7 @@ class User(DiscordModel):
 
     async def fetch(self) -> discord.User:
         if not self._is_loaded:
-            self.async_load()
+            await self.async_load()
         discord_user = self._core.get_user(self.id)
         if discord_user is None:
             discord_user = await self._core.fetch_user(self.id)
