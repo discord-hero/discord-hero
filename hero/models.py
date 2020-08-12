@@ -369,6 +369,8 @@ class User(DiscordModel):
     @async_using_db
     def async_load(self, prefetch_related=True):
         self.load(prefetch_related=prefetch_related)
+        if not self.is_active:
+            raise InactiveUser(f"The user {self.id} is inactive")
 
     def load(self, prefetch_related=True):
         super().load(prefetch_related=True)
@@ -384,7 +386,7 @@ class User(DiscordModel):
 
     async def fetch(self) -> discord.User:
         if not self._is_loaded:
-            self.load()
+            self.async_load()
         discord_user = self._core.get_user(self.id)
         if discord_user is None:
             discord_user = await self._core.fetch_user(self.id)
@@ -660,7 +662,7 @@ class Member(DiscordModel):
         self._discord_obj = discord_member
         user_obj = await self.user
         if not user_obj.is_fetched:
-            user_obj._discord_obj = discord_member.user
+            await user_obj.fetch()
         return discord_member
 
 
@@ -673,12 +675,12 @@ class Message(DiscordModel):
     _discord_converter_cls = converter.MessageConverter
 
     @property
-    def guild(self):
+    async def guild(self):
         channel_obj = await self.channel
         return channel_obj.guild
 
     @guild.setter
-    def guild(self, value):
+    async def guild(self, value):
         channel_obj = await self.channel
         if channel_obj.is_dm:
             raise AttributeError("Cannot set guild of private message")
