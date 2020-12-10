@@ -15,8 +15,6 @@ import aiohttp
 
 from asgiref.sync import SyncToAsync, AsyncToSync
 
-import websockets
-
 from discord.utils import maybe_coroutine
 from discord.errors import HTTPException, GatewayNotFound, ConnectionClosed
 
@@ -114,9 +112,7 @@ def autorestart(delay_start=None, pause=None, restart_check=None):
                     GatewayNotFound,
                     ConnectionClosed,
                     aiohttp.ClientError,
-                    asyncio.TimeoutError,
-                    websockets.InvalidHandshake,
-                    websockets.WebSocketProtocolError) as e:
+                    asyncio.TimeoutError) as e:
                 if any((isinstance(e, ConnectionClosed) and e.code == 1000,  # clean disconnect
                         not isinstance(e, ConnectionClosed))):
                     await wrapped(*args, **kwargs)
