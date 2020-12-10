@@ -1,6 +1,9 @@
 discord-hero
 ============
 
+.. image:: https://liberapay.com/assets/widgets/donate.svg
+   :target: https://liberapay.com/monospacedmagic/donate
+
 discord-hero is an asynchronous, fully modular Discord bot framework that comes with
 batteries included, allowing you to write powerful `Discord <https://discordapp.com/>`_
 applications easily and quickly. It is intended for:
