@@ -569,7 +569,7 @@ class Role(DiscordModel):
 
 
 class Emoji(DiscordModel):
-    id = fields.BigIntegerField(primary_key=True, auto_created=True)
+    id = fields.BigAutoField(primary_key=True)
     name = fields.CharField(max_length=64)
     animated = fields.BooleanField(default=False)
     is_custom = fields.BooleanField()

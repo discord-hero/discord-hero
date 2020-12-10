@@ -10,7 +10,7 @@ from functools import partial
 import discord
 
 from django.core.exceptions import SynchronousOnlyOperation
-from django.db.models import (AutoField, BigIntegerField, BooleanField, CharField as _CharField,
+from django.db.models import (AutoField, BigAutoField, BigIntegerField, BooleanField, CharField as _CharField,
                               CASCADE, DateField, DateTimeField, DecimalField, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
                               IntegerField, ManyToManyField as _ManyToManyField,

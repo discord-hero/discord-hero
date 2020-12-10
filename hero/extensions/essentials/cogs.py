@@ -116,7 +116,7 @@ class Essentials(hero.Cog):
         # register the user
         user.is_active = True
         await user.async_save()
-        await user.register_message.async_delete()
+        await register_message.async_delete()
         await user.fetch()
 
         channel = None
