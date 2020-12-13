@@ -13,7 +13,7 @@ from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import (AutoField, BigAutoField, BigIntegerField, BooleanField, CharField as _CharField,
                               CASCADE, DateField, DateTimeField, DecimalField, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
-                              IntegerField, ManyToManyField as _ManyToManyField,
+                              IntegerField, ManyToManyField as _ManyToManyField, OneToOneField,
                               SET_DEFAULT, SET_NULL, SmallIntegerField, TextField)
 from django.db.models.fields.related_descriptors import (ManyToManyDescriptor as _ManyToManyDescriptor,
                                                          ReverseManyToOneDescriptor as _ReverseManyToOneDescriptor,

@@ -120,7 +120,8 @@ class Database:
         """
         if not isinstance(category_channel, discord.CategoryChannel):
             raise TypeError("category_channel must be a discord.CategoryChannel")
-        return await self._load(category_channel)
+        category_channel, _ = await self._load(category_channel)
+        return category_channel
 
     async def wrap_role(self, role: discord.Role):
         """Wrap a Role object obtained from Discord

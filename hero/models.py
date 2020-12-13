@@ -281,7 +281,8 @@ class DiscordModel(Model):
 
     @classmethod
     async def convert(cls, ctx, argument):
-        discord_obj = await cls._discord_converter_cls.convert(ctx, argument)
+        converter = cls._discord_converter_cls()
+        discord_obj = await converter.convert(ctx, argument)
         obj, existed_already = await cls.from_discord_obj(discord_obj)
         if not existed_already:
             await obj.async_save()
@@ -468,7 +469,8 @@ class TextChannel(DiscordModel):
 
     @classmethod
     async def convert(cls, ctx, argument):
-        discord_obj = await cls._discord_converter_cls.convert(ctx, argument)
+        converter = cls._discord_converter_cls()
+        discord_obj = await converter.convert(ctx, argument)
         obj, existed_already = await cls.from_discord_obj(discord_obj)
         if not existed_already:
             await obj.async_save()
