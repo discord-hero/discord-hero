@@ -36,10 +36,10 @@ class Database:
         obj, existed_already = await self._load(discord_obj)
         return obj, existed_already
 
-    async def _load(self, discord_obj):
+    async def _load(self, discord_obj, create_if_new=True):
         if isinstance(discord_obj, self._discord_classes):
             cls = self._model_map[type(discord_obj)]
-            obj, existed_already = await cls.from_discord_obj(discord_obj)
+            obj, existed_already = await cls.from_discord_obj(discord_obj, create_if_new=create_if_new)
             return obj, existed_already
         elif isinstance(discord_obj, self._models):
             try:
@@ -165,7 +165,7 @@ class Database:
         member, _ = await self._load(member)
         return member
 
-    async def wrap_message(self, message: discord.Message):
+    async def wrap_message(self, message: discord.Message, create_if_new=True):
         """Wrap a Message object obtained from Discord
         in a hero.Message to provide it with
         database-related functionalities (see hero.Model,
@@ -176,5 +176,5 @@ class Database:
         """
         if not isinstance(message, discord.Message):
             raise TypeError("message must be a discord.Message")
-        message, _ = await self._load(message)
+        message, _ = await self._load(message, create_if_new=create_if_new)
         return message

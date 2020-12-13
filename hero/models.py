@@ -265,17 +265,21 @@ class DiscordModel(Model):
 
     @classmethod
     @async_using_db
-    def from_discord_obj(cls, discord_obj):
-        obj, existed_already = cls.sync_from_discord_obj(discord_obj)
+    def from_discord_obj(cls, discord_obj, create_if_new=True):
+        obj, existed_already = cls.sync_from_discord_obj(discord_obj, create_if_new=create_if_new)
         return obj, existed_already
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
-        obj, created = cls.objects.get_or_create(id=discord_obj.id)
+        if create_if_new:
+            obj, created = cls.objects.get_or_create(id=discord_obj.id)
+        else:
+            obj = cls.objects.get(id=discord_obj.id)
+            created = False
         obj._discord_obj = discord_obj
         return obj, not created
 
@@ -339,7 +343,7 @@ class User(DiscordModel):
     _discord_converter_cls = converter.UserConverter
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, (cls._discord_cls, discord.ClientUser)):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
@@ -446,7 +450,7 @@ class TextChannel(DiscordModel):
     _discord_converter_cls = converter.TextChannelConverter
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
             if isinstance(discord_obj, discord.DMChannel):
@@ -459,10 +463,19 @@ class TextChannel(DiscordModel):
             is_dm = False
 
         if is_dm:
-            obj, created = cls.objects.get_or_create(id=discord_obj.id, is_dm=True)
+            if create_if_new:
+                obj, created = cls.objects.get_or_create(id=discord_obj.id, is_dm=True)
+            else:
+                obj = cls.objects.get(id=discord_obj.id)
+                created = False
         else:
-            guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-            obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild, is_dm=False)
+            if create_if_new:
+                guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
+                obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild, is_dm=False)
+            else:
+                obj = cls.objects.get(id=discord_obj.id)
+                obj.guild._discord_obj = discord_obj.guild
+                created = False
 
         obj._discord_obj = discord_obj
         return obj, not created
@@ -494,13 +507,19 @@ class VoiceChannel(DiscordModel):
     _discord_converter_cls = converter.VoiceChannelConverter
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
-        guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-        obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
+        if create_if_new:
+            guild, _ = Guild.sync_from_discord_obj(discord_obj.guild, create_if_new=create_if_new)
+            obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
+        else:
+            obj = cls.objects.get(id=discord_obj.id)
+            obj.guild._discord_obj = discord_obj.guild
+            created = False
+
         obj._discord_obj = discord_obj
         return obj, not created
 
@@ -522,13 +541,19 @@ class CategoryChannel(DiscordModel):
     _discord_converter_cls = converter.CategoryChannelConverter
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
-        guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-        obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
+        if create_if_new:
+            guild, _ = Guild.sync_from_discord_obj(discord_obj.guild, create_if_new=create_if_new)
+            obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
+        else:
+            obj = cls.objects.get(id=discord_obj.id)
+            obj.guild._discord_obj = discord_obj.guild
+            created = False
+
         obj._discord_obj = discord_obj
         return obj, not created
 
@@ -550,13 +575,19 @@ class Role(DiscordModel):
     _discord_converter_cls = converter.RoleConverter
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
-        guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
-        obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
+        if create_if_new:
+            guild, _ = Guild.sync_from_discord_obj(discord_obj.guild, create_if_new=create_if_new)
+            obj, created = cls.objects.get_or_create(id=discord_obj.id, guild=guild)
+        else:
+            obj = cls.objects.get(id=discord_obj.id)
+            obj.guild._discord_obj = discord_obj.guild
+            created = False
+
         obj._discord_obj = discord_obj
         return obj, not created
 
@@ -588,7 +619,12 @@ class Emoji(DiscordModel):
                             f"but a {type(discord_obj).__name__} was passed")
         if isinstance(discord_obj, discord.Emoji):
             discord_obj = discord.PartialEmoji(name=discord_obj.name, animated=discord_obj.animated, id=discord_obj.id)
-        obj, created = cls.objects.get_or_create(id=discord_obj.id, name=discord_obj.name, animated=discord_obj.animated)
+        if discord_obj.is_custom_emoji():
+            obj, created = cls.objects.get_or_create(id=discord_obj.id, name=discord_obj.name,
+                                                     animated=discord_obj.animated, is_custom=True)
+        else:
+            obj, created = cls.objects.get_or_create(name=discord_obj.name, animated=False, is_custom=False)
+
         obj._discord_obj = discord_obj
         return obj, not created
 
@@ -613,7 +649,7 @@ class Member(DiscordModel):
     class Meta:
         unique_together = (('user', 'guild'),)
 
-    auto_id = _models.BigAutoField(primary_key=True)
+    auto_id = fields.BigAutoField(primary_key=True)
     user = fields.UserField(db_index=True, on_delete=fields.CASCADE)
     guild = fields.GuildField(db_index=True, on_delete=fields.CASCADE)
 
@@ -628,20 +664,20 @@ class Member(DiscordModel):
         return super().__getattr__(name)
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, discord.Member):
             raise TypeError(f"discord_obj has to be a discord.Member "
                             f"but a {type(discord_obj).__name__} was passed")
         _user, _ = User.sync_from_discord_obj(discord_obj._user)
-        _guild, _ = Guild.sync_from_discord_obj(discord_obj.guild)
+        _guild, _ = Guild.sync_from_discord_obj(discord_obj.guild, create_if_new=create_if_new)
         # workaround for the nonexistence of composite primary keys in Django
         qs = cls.objects.filter(user=_user, guild=_guild)
         if qs.exists():
             obj = qs.first()
             obj.load()
             existed_already = True
-        else:
+        elif create_if_new:
             obj = cls.objects.create(user=_user, guild=_guild)
             existed_already = False
         obj._discord_obj = discord_obj
@@ -678,18 +714,24 @@ class Message(DiscordModel):
         self.channel.guild = value
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, cls._discord_cls):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
-        channel, _ = TextChannel.sync_from_discord_obj(discord_obj.channel)
+        channel, _ = TextChannel.sync_from_discord_obj(discord_obj.channel, create_if_new=create_if_new)
         if discord_obj.guild:
             user = discord_obj.author._user
         else:
             user = discord_obj.author
         author, _ = User.sync_from_discord_obj(user)
-        obj, created = cls.objects.get_or_create(id=discord_obj.id, channel=channel, author=author)
+        if create_if_new:
+            obj, created = cls.objects.get_or_create(id=discord_obj.id, channel=channel, author=author)
+        else:
+            obj = cls.objects.get(id=discord_obj.id)
+            created = False
+        obj.channel._discord_obj = discord_obj.channel
+        obj.user._discord_obj = user
         obj._discord_obj = discord_obj
         return obj, not created
 
