@@ -15,6 +15,7 @@ import aiohttp
 
 from asgiref.sync import SyncToAsync, AsyncToSync
 
+from discord import Object
 from discord.utils import maybe_coroutine
 from discord.errors import HTTPException, GatewayNotFound, ConnectionClosed
 
@@ -163,3 +164,9 @@ def merge_configs(default, overwrite):
             new_config[key] = value
 
     return new_config
+
+
+class MockMember(Object):
+    def __init__(self, user_id, guild_id):
+        super(MockMember, self).__init__(user_id)
+        self.guild = Object(guild_id)

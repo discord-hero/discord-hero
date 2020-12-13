@@ -31,7 +31,7 @@ from .cache import get_cache
 from .errors import ObjectDoesNotExist, InactiveUser, UserDoesNotExist, ResponseTookTooLong
 from .cli import style
 from .db import Database
-from .utils import issubmodule, titlecaseify
+from .utils import issubmodule, MockMember, titlecaseify
 
 
 class CommandConflict(discord.ClientException):
@@ -759,6 +759,9 @@ class Core(commands.Bot):
 
     def get_oauth_url(self):
         return discord.utils.oauth_url(self.user.id)
+
+    def substitute_member(self, user_id, guild_id):
+        return MockMember(user_id, guild_id)
 
     def run(self, reconnect=True):
         self._load_cogs()
