@@ -55,13 +55,13 @@ class Core(commands.Bot):
         self.db = Database(self)
         self.config = config
 
-        self.sync_db('hero')
+        self.sync_db('hero', interactive=True)
 
         extension_names = set(os.getenv('EXTENSIONS', '').split(';'))
         extension_names.update(os.getenv('LOCAL_EXTENSIONS', '').split(';'))
         if '' in extension_names:
             extension_names.remove('')
-        self.sync_db(*extension_names)
+        self.sync_db(*extension_names, interactive=True)
 
         self.settings = settings
         if self.settings is None:
@@ -413,22 +413,23 @@ class Core(commands.Bot):
 
         return essentials_cog
 
-    def sync_db(self, *extension_names):
+    def sync_db(self, *extension_names, interactive=False):
         if not extension_names:
             extension_names = list(self.__extensions.keys())
 
         print(f"Synchronizing database with models from {', '.join(extension_names)}...", end=' ')
-        # temporarily silence stdout while we sync the database
         backup_stdout = sys.stdout
-        sys.stdout = io.StringIO()
+        if not interactive:
+            # temporarily silence stdout while we sync the database
+            sys.stdout = io.StringIO()
         try:
-            management.call_command('makemigrations', *extension_names, interactive=False)
-            management.call_command('makemigrations', *extension_names, interactive=False, merge=True)
+            # management.call_command('makemigrations', *extension_names, interactive=interactive)
+            management.call_command('makemigrations', *extension_names, interactive=interactive, merge=True)
             for extension_name in extension_names:
                 try:
-                    management.call_command('migrate', extension_name, interactive=False)
+                    management.call_command('migrate', extension_name, interactive=interactive)
                 except management.CommandError:
-                    management.call_command('migrate', extension_name, interactive=False, run_syncdb=True)
+                    management.call_command('migrate', extension_name, interactive=interactive, run_syncdb=True)
         except management.CommandError as command_error:
             print(command_error, file=sys.stderr)
             return False
@@ -436,7 +437,8 @@ class Core(commands.Bot):
             print(style("OK", fg='green'), file=backup_stdout)
             return True
         finally:
-            sys.stdout = backup_stdout
+            if not interactive:
+                sys.stdout = backup_stdout
 
     async def on_message(self, message):
         if not self.is_ready():

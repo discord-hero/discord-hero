@@ -148,7 +148,7 @@ def database_initialization(test, *, from_main=False, **kwargs):
     backup_stdout = sys.stdout
     sys.stdout = io.StringIO()
     try:
-        management.call_command('makemigrations', 'hero', interactive=False)
+        # management.call_command('makemigrations', 'hero', interactive=False)
         management.call_command('makemigrations', 'hero', interactive=False, merge=True)
         try:
             management.call_command('migrate', 'hero', interactive=False)
