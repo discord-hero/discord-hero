@@ -9,6 +9,8 @@ import warnings
 
 import discord
 
+from .utils import MockMember
+
 
 class Database:
     def __init__(self, core):
@@ -60,9 +62,7 @@ class Database:
         attributes and methods of the discord.User
         that it is holding inside.
         """
-        if not isinstance(user, (discord.User, discord.Member)):
-            raise TypeError("user must be a discord.User or discord.Member")
-        if isinstance(user, discord.Member):
+        if isinstance(user, (discord.Member, MockMember)):
             user = user._user
         user, _ = await self._load(user)
         return user
@@ -76,8 +76,6 @@ class Database:
         attributes and methods of the discord.Guild
         that it is holding inside.
         """
-        if not isinstance(guild, discord.Guild):
-            raise TypeError("guild must be a discord.Guild")
         guild, _ = await self._load(guild)
         return guild
 
@@ -90,8 +88,6 @@ class Database:
         attributes and methods of the discord.TextChannel
         that it is holding inside.
         """
-        if not isinstance(text_channel, discord.TextChannel):
-            raise TypeError("text_channel must be a discord.TextChannel")
         text_channel, _ = await self._load(text_channel)
         return text_channel
 
@@ -104,8 +100,6 @@ class Database:
         attributes and methods of the discord.VoiceChannel
         that it is holding inside.
         """
-        if not isinstance(voice_channel, discord.VoiceChannel):
-            raise TypeError("voice_channel must be a discord.VoiceChannel")
         voice_channel, _ = await self._load(voice_channel)
         return voice_channel
 
@@ -118,8 +112,6 @@ class Database:
         attributes and methods of the discord.CategoryChannel
         that it is holding inside.
         """
-        if not isinstance(category_channel, discord.CategoryChannel):
-            raise TypeError("category_channel must be a discord.CategoryChannel")
         category_channel, _ = await self._load(category_channel)
         return category_channel
 
@@ -132,8 +124,6 @@ class Database:
         attributes and methods of the discord.Role
         that it is holding inside.
         """
-        if not isinstance(role, discord.Role):
-            raise TypeError("role must be a discord.Role")
         role, _ = await self._load(role)
         return role
 
@@ -146,8 +136,6 @@ class Database:
         attributes and methods of the discord.Emoji
         (or discord.PartialEmoji) that it is holding inside.
         """
-        if not isinstance(emoji, (discord.Emoji, discord.PartialEmoji)):
-            raise TypeError("emoji must be a discord.Emoji or discord.PartialEmoji")
         emoji, _ = await self._load(emoji)
         return emoji
 
@@ -160,8 +148,6 @@ class Database:
         attributes and methods of the discord.Member
         that it is holding inside.
         """
-        if not isinstance(member, discord.Member):
-            raise TypeError("member must be a discord.Member")
         member, _ = await self._load(member)
         return member
 
@@ -174,7 +160,5 @@ class Database:
         attributes and methods of the discord.Message
         that it is holding inside.
         """
-        if not isinstance(message, discord.Message):
-            raise TypeError("message must be a discord.Message")
         message, _ = await self._load(message, create_if_new=create_if_new)
         return message

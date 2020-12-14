@@ -169,4 +169,5 @@ def merge_configs(default, overwrite):
 class MockMember(Object):
     def __init__(self, user_id, guild_id):
         super(MockMember, self).__init__(user_id)
+        self._user = Object(user_id)
         self.guild = Object(guild_id)

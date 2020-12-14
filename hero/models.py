@@ -18,7 +18,7 @@ import hero
 from hero import fields
 from .errors import InactiveUser, UserDoesNotExist
 # temporary fix until Django's ORM is async
-from .utils import async_using_db
+from .utils import async_using_db, MockMember
 
 
 class QuerySet(_models.QuerySet):
@@ -272,7 +272,7 @@ class DiscordModel(Model):
     @classmethod
     def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
-        if not isinstance(discord_obj, cls._discord_cls):
+        if not isinstance(discord_obj, (cls._discord_cls, discord.Object)):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
         if create_if_new:
@@ -280,7 +280,8 @@ class DiscordModel(Model):
         else:
             obj = cls.objects.get(id=discord_obj.id)
             created = False
-        obj._discord_obj = discord_obj
+        if not isinstance(discord_obj, discord.Object):
+            obj._discord_obj = discord_obj
         return obj, not created
 
     @classmethod
@@ -345,7 +346,8 @@ class User(DiscordModel):
     @classmethod
     def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
-        if not isinstance(discord_obj, (cls._discord_cls, discord.ClientUser)):
+        if not isinstance(discord_obj, (cls._discord_cls, discord.ClientUser,
+                                        discord.Member, MockMember, discord.Object)):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
         if discord_obj.bot and discord_obj.id != discord_obj._state.user.id:
@@ -357,7 +359,10 @@ class User(DiscordModel):
         obj = qs.first()
         if not obj.is_active:
             raise InactiveUser(user_id=discord_obj.id)
-        obj._discord_obj = discord_obj
+        if isinstance(discord_obj, discord.Member):
+            discord_obj = discord_obj._user
+        if not isinstance(discord_obj, (MockMember, discord.Object)):
+            obj._discord_obj = discord_obj
         return obj, existed_already
 
     @async_using_db
@@ -666,10 +671,10 @@ class Member(DiscordModel):
     @classmethod
     def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
-        if not isinstance(discord_obj, discord.Member):
+        if not isinstance(discord_obj, (discord.Member, MockMember)):
             raise TypeError(f"discord_obj has to be a discord.Member "
                             f"but a {type(discord_obj).__name__} was passed")
-        _user, _ = User.sync_from_discord_obj(discord_obj._user)
+        _user, _ = User.sync_from_discord_obj(discord_obj)
         _guild, _ = Guild.sync_from_discord_obj(discord_obj.guild, create_if_new=create_if_new)
         # workaround for the nonexistence of composite primary keys in Django
         qs = cls.objects.filter(user=_user, guild=_guild)
