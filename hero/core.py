@@ -446,7 +446,15 @@ class Core(commands.Bot):
 
         await super().on_message(message)
 
-    async def wait_for_response(self, ctx, message_check=None, timeout=60, force_response=True) -> str:
+    async def wait_for_response(self, ctx_or_message, message_check=None, timeout=60, force_response=True) -> str:
+        import hero.models
+        if isinstance(ctx_or_message, hero.Context):
+            message = ctx.message
+        elif isinstance(ctx_or_message, discord.Message):
+            message = ctx_or_message
+        elif isinstance(ctx_or_message, models.Message):
+            message = ctx_or_message.discord
+
         def response_check(message):
             is_response = ctx.message.author == message.author and ctx.message.channel == message.channel
             return is_response and (message_check(message) if callable(message_check) else True)
@@ -460,22 +468,51 @@ class Core(commands.Bot):
                 return None
         return response.content
 
-    async def wait_for_confirmation(self, ctx, timeout=60, force_response=True) -> bool:
-        def is_confirmation(message):
-            return message.content.lower().startswith('y') or message.content.lower().startswith('n')
+    async def wait_for_confirmation(self, ctx_or_message, timeout=60, force_response=True, use_reactions=True) -> bool:
+        if use_reactions:
+            def reaction_check(payload: discord.RawReactionActionEvent):
+                user_id = payload.user_id
+                message_id = payload.message_id
+                emoji = payload.emoji
 
-        answer = await self.wait_for_response(ctx, message_check=is_confirmation, timeout=timeout,
-                                              force_response=force_response)
-        if not force_response and answer is None:
-            return None
-        if answer.lower().startswith('y'):
-            return True
-        if answer.lower().startswith('n'):
-            return False
+                return (message_id == msg.id
+                        and user_id == msg.author.id
+                        and str(emoji) in (self.YES_EMOJI, self.NO_EMOJI))
 
-    async def wait_for_choice(self, ctx, choices, timeout=60, force_response=True) -> int:
+            if isinstance(ctx_or_message, hero.Context):
+                message = ctx_or_message.message
+            else:
+                message = ctx_or_message
+            await message.add_reaction(self.YES_EMOJI)
+            await message.add_reaction(self.NO_EMOJI)
+            payload = await self.core.wait_for('raw_reaction_add', check=reaction_check, timeout=60)
+            if not force_response and payload is None:
+                return None
+            if str(payload.emoji) == self.YES_EMOJI:
+                return True
+            if str(payload.emoji) == self.NO_EMOJI:
+                return False
+        else:
+            def is_confirmation(message):
+                return message.content.lower().startswith('y') or message.content.lower().startswith('n')
+
+            answer = await self.wait_for_response(ctx_or_message, message_check=is_confirmation, timeout=timeout,
+                                                  force_response=force_response)
+            if not force_response and answer is None:
+                return None
+            if answer.lower().startswith('y'):
+                return True
+            if answer.lower().startswith('n'):
+                return False
+
+    async def wait_for_choice(self, ctx_or_message, choices, timeout=60, force_response=True) -> int:
         if isinstance(choices, types.GeneratorType):
             choices = list(choices)
+
+        if hasattr(ctx_or_message, 'channel'):
+            dest = ctx_or_message.channel
+        if hasattr(dest, 'discord'):
+            dest = dest.discord
 
         choice_format = "**{}**: {}"
 
@@ -490,9 +527,9 @@ class Core(commands.Bot):
             paginator.add_line(choice_format.format(i, _choice))
 
         for page in paginator.pages:
-            await ctx.send(page)
+            await dest.send(page)
 
-        choice = await self.wait_for_response(ctx, message_check=choice_check, timeout=timeout)
+        choice = await self.wait_for_response(ctx_or_message, message_check=choice_check, timeout=timeout)
         if not force_response and choice is None:
             return None
         return int(choice.split(maxsplit=1)[0])
@@ -586,7 +623,7 @@ class Core(commands.Bot):
 
         await super().on_error(event_method, *args, **kwargs)
 
-    async def on_command_error(self, ctx: commands.Context, error):
+    async def on_command_error(self, ctx: hero.Context, error):
         # get the original exception
         error = getattr(error, 'original', error)
 
