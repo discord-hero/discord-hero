@@ -28,7 +28,8 @@ class Database:
             discord.Emoji: Emoji,
             discord.PartialEmoji: Emoji,
             discord.Member: Member,
-            discord.Message: Message
+            discord.Message: Message,
+            MockMember: Member
         }
         self._models = tuple(self._model_map.values())
         self._discord_classes = tuple(self._model_map.keys())

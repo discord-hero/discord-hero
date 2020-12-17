@@ -25,6 +25,8 @@ def main(test, **kwargs):
 
     # dotenv config values
     os.environ['PROD'] = str(not test)
+    if test:
+        os.environ['PYTHONASYNCIODEBUG'] = '1'
     os.environ.update({key: str(value) for key, value in kwargs.items() if value is not None})
 
     # TODO custom prompt function based on click's that asks for config details that aren't given
@@ -148,7 +150,7 @@ def database_initialization(test, *, from_main=False, **kwargs):
     backup_stdout = sys.stdout
     sys.stdout = io.StringIO()
     try:
-        # management.call_command('makemigrations', 'hero', interactive=False)
+        management.call_command('makemigrations', 'hero', interactive=False)
         management.call_command('makemigrations', 'hero', interactive=False, merge=True)
         try:
             management.call_command('migrate', 'hero', interactive=False)

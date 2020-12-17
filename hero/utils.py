@@ -130,6 +130,10 @@ class SyncToAsyncThreadSafe(SyncToAsync):
     def __init__(self, func):
         super().__init__(func, thread_sensitive=True)
 
+    @property
+    def thread(self):
+        return self.single_thread_executor._threads[0]
+
 
 sync_to_async = SyncToAsync
 sync_to_async_threadsafe = SyncToAsyncThreadSafe
