@@ -6,6 +6,7 @@
 
 import asyncio
 from functools import partial
+import threading
 
 import discord
 
@@ -13,12 +14,14 @@ from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import (AutoField, BigAutoField, BigIntegerField, BooleanField, CharField as _CharField,
                               CASCADE, DateField, DateTimeField, DecimalField, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
-                              IntegerField, ManyToManyField as _ManyToManyField, OneToOneField,
+                              IntegerField, ManyToManyField as _ManyToManyField, OneToOneField as _OneToOneField,
                               SET_DEFAULT, SET_NULL, SmallIntegerField, TextField)
 from django.db.models.fields.related_descriptors import (ManyToManyDescriptor as _ManyToManyDescriptor,
                                                          ReverseManyToOneDescriptor as _ReverseManyToOneDescriptor,
                                                          ForwardManyToOneDescriptor as _ForwardManyToOneDescriptor,
                                                          ForeignKeyDeferredAttribute as _ForeignKeyDeferredAttribute,
+                                                         ReverseOneToOneDescriptor as _ReverseOneToOneDescriptor,
+                                                         ForwardOneToOneDescriptor as _ForwardOneToOneDescriptor,
                                                          create_forward_many_to_many_manager,
                                                          create_reverse_many_to_one_manager)
 from django.db.models.fields.related import lazy_related_operation, create_many_to_many_intermediary_model
@@ -38,7 +41,7 @@ class ForeignKeyDeferredAttribute(_ForeignKeyDeferredAttribute):
         except RuntimeError:
             return super(ForeignKeyDeferredAttribute, self).__get__(instance, cls=cls)
         else:
-            if event_loop.is_running():
+            if event_loop.is_running():  # and not threading.get_ident() == async_using_db.thread.ident:
                 if self.field.is_cached(instance):
                     # wrap cached value in coroutine so it will always have to be awaited
                     # if accessed from an async context to make behavior more consistent
@@ -58,7 +61,7 @@ class ForwardManyToOneDescriptor(_ForwardManyToOneDescriptor):
         except RuntimeError:
             return super(ForwardManyToOneDescriptor, self).__get__(instance, cls=cls)
         else:
-            if event_loop.is_running():
+            if event_loop.is_running():  # and not threading.get_ident() == async_using_db.thread.ident:
                 if self.field.is_cached(instance):
                     # wrap cached value in coroutine so it will always have to be awaited
                     # if accessed from an async context to make behavior more consistent
@@ -152,10 +155,55 @@ class ManyToManyDescriptor(_ManyToManyDescriptor):
         return ManyRelatedManager
 
 
+class ReverseOneToOneDescriptor(_ReverseOneToOneDescriptor):
+    def __get__(self, instance, cls=None):
+        if instance is None:
+            return self
+
+        try:
+            event_loop = asyncio.get_event_loop()
+        except RuntimeError:
+            return super(_ReverseOneToOneDescriptor, self).__get__(instance, cls=cls)
+        else:
+            if event_loop.is_running():  # and not threading.get_ident() == async_using_db.thread.ident:
+                if self.field.is_cached(instance):
+                    # wrap cached value in coroutine so it will always have to be awaited
+                    # if accessed from an async context to make behavior more consistent
+                    return maybe_coroutine(super(_ReverseOneToOneDescriptor, self).__get__, instance, cls=cls)
+                else:
+                    return async_using_db(super(_ReverseOneToOneDescriptor, self).__get__)(instance, cls=cls)
+            return super(_ReverseOneToOneDescriptor, self).__get__(instance, cls=cls)
+
+
+class ForwardOneToOneDescriptor(_ForwardOneToOneDescriptor):
+    def __get__(self, instance, cls=None):
+        if instance is None:
+            return self
+
+        try:
+            event_loop = asyncio.get_event_loop()
+        except RuntimeError:
+            return super(_ForwardOneToOneDescriptor, self).__get__(instance, cls=cls)
+        else:
+            if event_loop.is_running():  # and not threading.get_ident() == async_using_db.thread.ident:
+                if self.field.is_cached(instance):
+                    # wrap cached value in coroutine so it will always have to be awaited
+                    # if accessed from an async context to make behavior more consistent
+                    return maybe_coroutine(super(_ForwardOneToOneDescriptor, self).__get__, instance, cls=cls)
+                else:
+                    return async_using_db(super(_ForwardOneToOneDescriptor, self).__get__)(instance, cls=cls)
+            return super(_ForwardOneToOneDescriptor, self).__get__(instance, cls=cls)
+
+
 class ForeignKey(_ForeignKey):
     descriptor_class = ForeignKeyDeferredAttribute
     related_accessor_class = ReverseManyToOneDescriptor
     forward_related_accessor_class = ForwardManyToOneDescriptor
+
+
+class OneToOneField(_OneToOneField):
+    related_accessor_class = ReverseOneToOneDescriptor
+    forward_related_accessor_class = ForwardOneToOneDescriptor
 
 
 class ManyToManyField(_ManyToManyField):
