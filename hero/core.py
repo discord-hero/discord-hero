@@ -423,7 +423,7 @@ class Core(commands.Bot):
             # temporarily silence stdout while we sync the database
             sys.stdout = io.StringIO()
         try:
-            # management.call_command('makemigrations', *extension_names, interactive=interactive)
+            management.call_command('makemigrations', *extension_names, interactive=interactive)
             management.call_command('makemigrations', *extension_names, interactive=interactive, merge=True)
             for extension_name in extension_names:
                 try:
@@ -544,7 +544,7 @@ class Core(commands.Bot):
         if isinstance(value, UserDoesNotExist):
             prefix = self.default_prefix
             delete_after = None
-            if event_method in ('raw_reaction_add', 'raw_reaction_remove'):
+            if event_method in ('on_raw_reaction_add', 'on_raw_reaction_remove'):
                 send_message = True
                 delete_after = 60
                 payload: discord.RawReactionActionEvent = args[0]
@@ -554,13 +554,13 @@ class Core(commands.Bot):
                 channel = self.get_channel(payload.channel_id)
                 if channel is None:
                     channel = await self.fetch_channel(payload.channel_id)
-            elif event_method in ('reaction_add', 'reaction_remove'):
+            elif event_method in ('on_reaction_add', 'on_reaction_remove'):
                 send_message = True
                 delete_after = 60
                 user = args[1]
                 reaction = args[0]
                 channel = reaction.message.channel
-            elif event_method in ('raw_message_delete', 'raw_message_edit'):
+            elif event_method in ('on_raw_message_delete', 'on_raw_message_edit'):
                 send_message = False
                 payload = args[0]
                 channel = self.get_channel(payload.channel_id)
@@ -568,20 +568,20 @@ class Core(commands.Bot):
                     channel = await self.fetch_channel(payload.channel_id)
                 message = await channel.fetch_message(payload.message_id)
                 user = message.author
-            elif event_method in ('message', 'message_delete', 'message_edit'):
+            elif event_method in ('on_message', 'on_message_delete', 'on_message_edit'):
                 send_message = False
                 message = args[0]
                 user = message.author
                 channel = message.channel
-            elif event_method in ('member_join' or 'member_remove'):
+            elif event_method in ('on_member_join' or 'on_member_remove'):
                 send_message = True
                 user = member = args[0]
                 channel = member.guild.system_channel
-            elif event_method in ('member_update' or 'user_update'):
+            elif event_method in ('on_member_update' or 'on_user_update'):
                 send_message = False
                 user = args[1]
                 channel = None
-            elif event_method == 'private_channel_pins_update':
+            elif event_method == 'on_private_channel_pins_update':
                 send_message = True
                 channel = args[0]
                 user = channel.recipient
