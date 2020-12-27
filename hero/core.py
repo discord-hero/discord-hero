@@ -55,13 +55,13 @@ class Core(commands.Bot):
         self.db = Database(self)
         self.config = config
 
-        self.sync_db('hero', interactive=True)
+        self.sync_db('hero', interactive=hero.TEST)
 
         extension_names = set(os.getenv('EXTENSIONS', '').split(';'))
         extension_names.update(os.getenv('LOCAL_EXTENSIONS', '').split(';'))
         if '' in extension_names:
             extension_names.remove('')
-        self.sync_db(*extension_names, interactive=True)
+        self.sync_db(*extension_names, interactive=hero.TEST)
 
         self.settings = settings
         if self.settings is None:
@@ -105,6 +105,9 @@ class Core(commands.Bot):
         return {}
 
     async def on_ready(self):
+        # easiest way to get the bot to set its owners
+        await self.is_owner(discord.Object(id=0))
+
         from hero.models import User
         # save the bot user in the database if it isn't saved yet
         qs = User.objects.filter(id=self.user.id)
@@ -121,6 +124,8 @@ class Core(commands.Bot):
         else:
             os.system('clear')
 
+        if not os.getenv('PROD'):
+            print("TEST MODE\n\n")
         print(strings.bot_is_online.format(self.user.name))
         print("\n{} active extensions".format(len(self.__extensions) - 1))  # we don't count essentials
         prefix_label = strings.prefix_singular
@@ -422,6 +427,11 @@ class Core(commands.Bot):
         if not interactive:
             # temporarily silence stdout while we sync the database
             sys.stdout = io.StringIO()
+        for extension_name in extension_names:
+            try:
+                management.call_command('migrate', extension_name, interactive=interactive)
+            except management.CommandError:
+                management.call_command('migrate', extension_name, interactive=interactive, run_syncdb=True)
         try:
             management.call_command('makemigrations', *extension_names, interactive=interactive)
             management.call_command('makemigrations', *extension_names, interactive=interactive, merge=True)
@@ -447,16 +457,16 @@ class Core(commands.Bot):
         await super().on_message(message)
 
     async def wait_for_response(self, ctx_or_message, message_check=None, timeout=60, force_response=True) -> str:
-        import hero.models
+        from hero import models
         if isinstance(ctx_or_message, hero.Context):
-            message = ctx.message
+            message = ctx_or_message.message
         elif isinstance(ctx_or_message, discord.Message):
             message = ctx_or_message
         elif isinstance(ctx_or_message, models.Message):
             message = ctx_or_message.discord
 
-        def response_check(message):
-            is_response = ctx.message.author == message.author and ctx.message.channel == message.channel
+        def response_check(_message):
+            is_response = message.author == _message.author and message.channel == _message.channel
             return is_response and (message_check(message) if callable(message_check) else True)
 
         try:
@@ -468,24 +478,31 @@ class Core(commands.Bot):
                 return None
         return response.content
 
-    async def wait_for_confirmation(self, ctx_or_message, timeout=60, force_response=True, use_reactions=True) -> bool:
+    async def wait_for_confirmation(self, ctx_or_message, responding, timeout=60, force_response=True, use_reactions=True) -> bool:
+        from hero import models
+        if isinstance(ctx_or_message, hero.Context):
+            message = ctx_or_message.message
+        elif isinstance(ctx_or_message, discord.Message):
+            message = ctx_or_message
+        elif isinstance(ctx_or_message, models.Message):
+            message = ctx_or_message.discord
+
         if use_reactions:
             def reaction_check(payload: discord.RawReactionActionEvent):
                 user_id = payload.user_id
                 message_id = payload.message_id
                 emoji = payload.emoji
 
-                return (message_id == msg.id
-                        and user_id == msg.author.id
+                return (message_id == message.id
+                        and user_id == responding.id
                         and str(emoji) in (self.YES_EMOJI, self.NO_EMOJI))
 
-            if isinstance(ctx_or_message, hero.Context):
-                message = ctx_or_message.message
-            else:
-                message = ctx_or_message
             await message.add_reaction(self.YES_EMOJI)
             await message.add_reaction(self.NO_EMOJI)
-            payload = await self.core.wait_for('raw_reaction_add', check=reaction_check, timeout=60)
+            try:
+                payload = await self.wait_for('raw_reaction_add', check=reaction_check, timeout=60)
+            except asyncio.TimeoutError:
+                raise ResponseTookTooLong()
             if not force_response and payload is None:
                 return None
             if str(payload.emoji) == self.YES_EMOJI:
@@ -493,10 +510,10 @@ class Core(commands.Bot):
             if str(payload.emoji) == self.NO_EMOJI:
                 return False
         else:
-            def is_confirmation(message):
-                return message.content.lower().startswith('y') or message.content.lower().startswith('n')
+            def is_confirmation(_message):
+                return _message.content.lower().startswith('y') or _message.content.lower().startswith('n')
 
-            answer = await self.wait_for_response(ctx_or_message, message_check=is_confirmation, timeout=timeout,
+            answer = await self.wait_for_response(message, message_check=is_confirmation, timeout=timeout,
                                                   force_response=force_response)
             if not force_response and answer is None:
                 return None
@@ -756,8 +773,12 @@ class Core(commands.Bot):
                 try:
                     register_message = await user.send(message_text.format(user.name, prefix))
                 except discord.Forbidden:
-                    register_message = await fallback_channel.send(message_text.format(user.mention, prefix),
-                                                                   delete_after=delete_after or 180)
+                    try:
+                        register_message = await fallback_channel.send(message_text.format(user.mention, prefix),
+                                                                       delete_after=delete_after or 180)
+                    except discord.Forbidden:
+                        # nothing we can do
+                        pass
         else:
             if inactive:
                 # author is not None
@@ -780,7 +801,7 @@ class Core(commands.Bot):
                 message_text = strings.other_user_not_registered
                 if fallback_channel is not None:
                     try:
-                        register_message = await fallback_channel.send(message_text.format(author.mention, user.mention, prefix),
+                        register_message = await fallback_channel.send(message_text.format(user.mention, user.mention, prefix),
                                                                        delete_after=delete_after or 180)
                     except discord.Forbidden:
                         try:

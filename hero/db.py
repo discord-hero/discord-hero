@@ -20,6 +20,7 @@ class Database:
                                  CategoryChannel, Role, Emoji, Member, Message)
         self._model_map = {
             discord.User: User,
+            discord.ClientUser: User,
             discord.Guild: Guild,
             discord.TextChannel: TextChannel,
             discord.VoiceChannel: VoiceChannel,

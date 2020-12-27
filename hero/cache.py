@@ -74,8 +74,8 @@ def cached(expire_after=None, key=None, include_self=True):
 
     :param expire_after:
         When to discard the cached return value after it has
-        been cached. The default is ``None``, which means the
-        cached return value does never expire and will not be
+        been cached. In seconds The default is ``None``, which means
+        the cached return value does never expire and will not be
         discarded.
     :type expire_after: Optional[int]
     :param key:
@@ -109,7 +109,7 @@ def init():
                 'cache': 'aiocache.SimpleMemoryCache',
                 'namespace': 'hero',
                 'serializer': {
-                    'class': 'aiocache.serializers.PickleSerializer'
+                    'class': 'aiocache.serializers.JsonSerializer'
                 }
             }
         }
@@ -125,7 +125,7 @@ def init():
                 'pool_min_size': 1,
                 'pool_max_size': 10,
                 'serializer': {
-                    'class': 'aiocache.serializers.PickleSerializer'
+                    'class': 'aiocache.serializers.JsonSerializer'
                 }
             }
         }

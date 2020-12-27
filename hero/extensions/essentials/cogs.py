@@ -121,7 +121,7 @@ class Essentials(hero.Cog):
 
         channel = None
         if guild_id is not None:
-            guild = await self.core.get_guild(guild_id)
+            guild = self.core.get_guild(guild_id)
             if guild is None:
                 await self.core.fetch_guild(guild_id)
             if guild is not None:
