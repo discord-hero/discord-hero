@@ -12,7 +12,7 @@ import os
 import sys
 
 import django
-from django.db import OperationalError
+from django.db import OperationalError, ProgrammingError
 from django.core import management
 
 import hero
@@ -32,7 +32,7 @@ def main(test, **kwargs):
     # TODO custom prompt function based on click's that asks for config details that aren't given
 
     database_type = os.getenv('DB_TYPE')
-    if database_type != 'sqlite':
+    if database_type != 'sqlite' and not os.getenv('DB_HOST'):
         os.environ['DB_HOST'] = prompt("DB host", value_proc=str, default='localhost')
         os.environ['DB_PORT'] = prompt("DB port", value_proc=str,
                                        default='5432' if database_type == 'postgres'
@@ -42,7 +42,7 @@ def main(test, **kwargs):
         os.environ['DB_PASSWORD'] = prompt("DB password", value_proc=str, hide_input=True)
 
     cache_type = os.getenv('CACHE_TYPE')
-    if os.getenv('CACHE_TYPE') != 'simple':
+    if os.getenv('CACHE_TYPE') != 'simple' and not os.getenv('CACHE_HOST'):
         os.environ['CACHE_HOST'] = prompt("Cache host", value_proc=str, default='localhost')
         os.environ['CACHE_PORT'] = prompt("Cache port", value_proc=str,
                                           default='6379' if cache_type == 'redis' else None)
@@ -103,7 +103,6 @@ def main(test, **kwargs):
         asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
     except ImportError:
         pass
-
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
@@ -114,9 +113,13 @@ def main(test, **kwargs):
     # db config values
     try:
         settings, created = CoreSettings.get_or_create(name=os.getenv('NAMESPACE'))
-    except OperationalError:
-        print(style("Error: Database hasn't been initialized yet; use `hero dbinit`", fg='red'), file=sys.stderr)
-        return
+    except (OperationalError, ProgrammingError):
+        if database_type != 'sqlite':
+            print("Running `hero dbinit`")
+            database_initialization(test, from_main=True, **kwargs)
+            print("You can now use `hero` to run your Discord Hero instance.")
+            return
+        raise
     if created:
         settings.prefixes = [prompt("Bot command prefix", value_proc=str, default='!')]
         settings.description = prompt("Short description of your bot", value_proc=str, default='')

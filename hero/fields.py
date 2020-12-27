@@ -12,10 +12,11 @@ import discord
 
 from django.core.exceptions import SynchronousOnlyOperation
 from django.db.models import (AutoField, BigAutoField, BigIntegerField, BooleanField, CharField as _CharField,
-                              CASCADE, DateField, DateTimeField, DecimalField, FloatField,
+                              CASCADE, DateField, DateTimeField, DecimalField, DO_NOTHING, FloatField,
                               ForeignKey as _ForeignKey, ForeignObject,
                               IntegerField, ManyToManyField as _ManyToManyField, OneToOneField as _OneToOneField,
-                              SET_DEFAULT, SET_NULL, SmallIntegerField, TextField)
+                              PROTECT, ProtectedError, RESTRICT, RestrictedError, SET_DEFAULT,
+                              SET_NULL, SmallIntegerField, TextField)
 from django.db.models.fields.related_descriptors import (ManyToManyDescriptor as _ManyToManyDescriptor,
                                                          ReverseManyToOneDescriptor as _ReverseManyToOneDescriptor,
                                                          ForwardManyToOneDescriptor as _ForwardManyToOneDescriptor,

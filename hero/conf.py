@@ -187,7 +187,7 @@ class Config:
 
     @property
     def file_name(self):
-        return '.testenv' if self.test else '.env'
+        return '.testenv' if self.test else '.prodenv'
 
     @property
     def file_path(self):
