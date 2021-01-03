@@ -42,7 +42,7 @@ class Cog(_discord_cog.Cog):
 
     @property
     def config(self):
-        return self.extension.config
+        return self.extension.config_cls
 
     def _inject(self, core):
         cls = self.__class__

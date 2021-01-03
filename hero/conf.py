@@ -3,7 +3,6 @@
 :copyright: (c) 2019-2020 monospacedmagic et al.
 :license: Apache-2.0 OR MIT
 """
-
 import importlib
 from importlib.util import spec_from_file_location, module_from_spec
 import inspect
@@ -19,11 +18,31 @@ from .errors import ConfigurationError, ExtensionNotFound, InvalidArgument
 
 
 class ExtensionConfig(AppConfig):
+    """The Class that all Extension classes can use to store configs.
+
+    For example to create a class config, the following would done.
+    .. code-block:: python3
+
+        from hero import ExtensionConfig, version
+
+        class ExampleConfig(ExtensionConfig):
+            verbose_name = "Music Commands"
+            important_conf = "Very Important"
+    """
     def __init_subclass__(cls, **kwargs):
         cls.name = cls.__module__
 
 
 class Extension:
+    """A Class that deals in getting extension's settings, models and controller
+
+    Attributes
+    -----------
+    name: :class:`str`
+        Name of the extension
+    module: 
+
+    """
     def __init__(self, name: str, module):
         self.name = name
         self._module = module
@@ -48,12 +67,32 @@ class Extension:
 
     @property
     def config_cls(self) -> ExtensionConfig:
+        """Gives you the config initialised for the Extension
+
+        Returns 
+        --------
+        Config: :class:`.ExtensionConfig`
+                The configs for the extension"""
         config_class = inspect.getmembers(self._module, lambda member: isinstance(member, type)
                                                                        and issubclass(member, ExtensionConfig)
                                                                        and member is not ExtensionConfig)
-        return config_class[0][1]
+        try:
+            return config_class[0][1]
+        except IndexError:
+            return None
 
     def get_controller(self, core):
+        """ Gets the controller for the current extension
+
+        Parameters
+        -----------
+        core :class: `hero.Core`
+
+        Returns
+        --------
+        Controller :class: `hero.Controller`
+            The controller of the extension
+        """
         db = hero.Database(core)
         cache = hero.get_cache(self.name)
         settings = core.get_settings(self.name)
@@ -61,6 +100,7 @@ class Extension:
         if _ControllerClass is None:
             return None
         return _ControllerClass(core, self, db, cache, settings)
+
 
     @property
     def _controller_cls(self):
