@@ -1,0 +1,19 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+twine = "*"
+bumpversion = "*"
+sphinx = "*"
+sphinxcontrib-trio = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
+
+[packages]
+discord-hero = {editable = true, path = ".", extras = ['redis', 'postgresql']}
+
+[pipenv]
+allow_prereleases = true
