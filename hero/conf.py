@@ -252,7 +252,9 @@ class Config:
             'CACHE_HOST': os.getenv('CACHE_HOST', None),
             'CACHE_PORT': os.getenv('CACHE_PORT', None),
             'CACHE_PASSWORD': os.getenv('CACHE_PASSWORD', None),
-            'CACHE_DB': os.getenv('CACHE_DB', 0)
+            'CACHE_DB': os.getenv('CACHE_DB', 0),
+            'USE_MEMBERS_INTENT': os.getenv('USE_MEMBERS_INTENT', False),
+            'USE_PRESENCE_INTENT': os.getenv('USE_PRESENCE_INTENT', False)
         }
         _config = {key: value for key, value in _config.items() if value is not None}
         return _config
