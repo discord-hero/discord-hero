@@ -63,6 +63,13 @@ class Core(commands.Bot):
             extension_names.remove('')
         self.sync_db(*extension_names, interactive=hero.TEST)
 
+        intents = discord.Intents.default()
+        if os.getenv('USE_MEMBERS_INTENT'):
+            intents.members = True
+
+        if os.getenv('USE_PRESENCE_INTENT'):
+            intents.presences = True
+        
         self.settings = settings
         if self.settings is None:
             from hero.models import CoreSettings
@@ -72,7 +79,7 @@ class Core(commands.Bot):
                                    loop=loop, description=self.get_description(),
                                    pm_help=None, cache_auth=False,
                                    command_not_found=strings.command_not_found,
-                                   command_has_no_subcommands=strings.command_has_no_subcommands)
+                                   command_has_no_subcommands=strings.command_has_no_subcommands, intents=intents)
 
         user_agent = 'discord-hero (https://github.com/discord-hero/discord-hero {0}) ' \
                      'Python/{1} aiohttp/{2} discord.py/{3}'
