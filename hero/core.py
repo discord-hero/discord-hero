@@ -63,6 +63,13 @@ class Core(commands.Bot):
             extension_names.remove('')
         self.sync_db(*extension_names, interactive=hero.TEST)
 
+        intents = discord.Intents.default()
+        if os.getenv('USE_MEMBERS_INTENT'):
+            intents.members = True
+
+        if os.getenv('USE_PRESENCE_INTENT'):
+            intents.presences = True
+        
         self.settings = settings
         if self.settings is None:
             from hero.models import CoreSettings
