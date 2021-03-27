@@ -11,7 +11,7 @@ from discord.ext.commands import converter
 
 from django.conf import settings as django_settings
 from django.db import models as _models
-from django.db.models import prefetch_related_objects
+from django.db.models import Count, Max, Min, prefetch_related_objects, Q, Sum
 from django.db.models.fields.reverse_related import ForeignObjectRel
 
 import hero
@@ -355,12 +355,14 @@ class User(DiscordModel):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
                             f"but a {type(discord_obj).__name__} was passed")
 
-        if discord_obj.id == discord_obj._state.user.id:
-            obj, _ = cls.objects.get_or_create(id=discord_obj.id)
-            return obj, True
+        if not isinstance(discord_obj, (MockMember, discord.Object)):
+            # if self
+            if discord_obj.id == discord_obj._state.user.id:
+                obj, _ = cls.objects.get_or_create(id=discord_obj.id)
+                return obj, True
 
-        if discord_obj.bot:
-            raise ValueError("Bot users cannot be stored in the database")
+            if discord_obj.bot:
+                raise ValueError("Bot users cannot be stored in the database")
         qs = cls.objects.filter(id=discord_obj.id)
         existed_already = qs.exists()
         if not existed_already:
@@ -621,9 +623,8 @@ class Role(DiscordModel):
         #     await self.guild.fetch()
         guild = await self.guild
         await guild.fetch()
-        discord_role = guild.get_role(self.id)
-        if discord_role is None:
-            discord_role = await guild.fetch_role(self.id)
+        roles = await guild.fetch_roles()
+        discord_role = discord.utils.get(roles, id=self.id)
         self._discord_obj = discord_role
         return discord_role
 
@@ -722,6 +723,12 @@ class Member(DiscordModel):
             discord_member = await guild.fetch_member(user.id)
         self._discord_obj = discord_member
         return discord_member
+
+    def __int__(self):
+        return hash(self.auto_id)
+
+    def __hash__(self):
+        return hash(self.auto_id)
 
 
 class Message(DiscordModel):

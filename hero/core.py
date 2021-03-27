@@ -456,7 +456,7 @@ class Core(commands.Bot):
 
         await super().on_message(message)
 
-    async def wait_for_response(self, ctx_or_message, message_check=None, timeout=60, force_response=True) -> str:
+    async def wait_for_response(self, ctx_or_message, responding=None, message_check=None, timeout=60, force_response=True) -> str:
         from hero import models
         if isinstance(ctx_or_message, hero.Context):
             message = ctx_or_message.message
@@ -464,10 +464,15 @@ class Core(commands.Bot):
             message = ctx_or_message
         elif isinstance(ctx_or_message, models.Message):
             message = ctx_or_message.discord
+        else:
+            raise TypeError("ctx_or_message needs to be either a Context or a Message object")
+
+        if responding is None:
+            responding = message.author
 
         def response_check(_message):
-            is_response = message.author == _message.author and message.channel == _message.channel
-            return is_response and (message_check(message) if callable(message_check) else True)
+            is_response = responding.id == _message.author.id and message.channel == _message.channel
+            return is_response and (message_check(_message) if callable(message_check) else True)
 
         try:
             response = await self.wait_for('message', check=response_check, timeout=timeout)
@@ -486,6 +491,8 @@ class Core(commands.Bot):
             message = ctx_or_message
         elif isinstance(ctx_or_message, models.Message):
             message = ctx_or_message.discord
+        else:
+            raise TypeError("ctx_or_message needs to be either a Context or a Message object")
 
         if use_reactions:
             def reaction_check(payload: discord.RawReactionActionEvent):
@@ -502,9 +509,10 @@ class Core(commands.Bot):
             try:
                 payload = await self.wait_for('raw_reaction_add', check=reaction_check, timeout=60)
             except asyncio.TimeoutError:
-                raise ResponseTookTooLong()
-            if not force_response and payload is None:
-                return None
+                if force_response:
+                    raise ResponseTookTooLong()
+                else:
+                    return None
             if str(payload.emoji) == self.YES_EMOJI:
                 return True
             if str(payload.emoji) == self.NO_EMOJI:
@@ -513,8 +521,8 @@ class Core(commands.Bot):
             def is_confirmation(_message):
                 return _message.content.lower().startswith('y') or _message.content.lower().startswith('n')
 
-            answer = await self.wait_for_response(message, message_check=is_confirmation, timeout=timeout,
-                                                  force_response=force_response)
+            answer = await self.wait_for_response(message, responding=responding, message_check=is_confirmation,
+                                                  timeout=timeout, force_response=force_response)
             if not force_response and answer is None:
                 return None
             if answer.lower().startswith('y'):
@@ -522,20 +530,39 @@ class Core(commands.Bot):
             if answer.lower().startswith('n'):
                 return False
 
-    async def wait_for_choice(self, ctx_or_message, choices, timeout=60, force_response=True) -> int:
+    async def wait_for_choice(self, ctx_or_message, responding, choices, timeout=60, force_response=True) -> int:
+        from hero import models
+        if isinstance(ctx_or_message, hero.Context):
+            message = ctx_or_message.message
+        elif isinstance(ctx_or_message, discord.Message):
+            message = ctx_or_message
+        elif isinstance(ctx_or_message, models.Message):
+            message = ctx_or_message.discord
+        else:
+            raise TypeError("ctx_or_message needs to be either a Context or a Message object")
+
         if isinstance(choices, types.GeneratorType):
             choices = list(choices)
 
         if hasattr(ctx_or_message, 'channel'):
             dest = ctx_or_message.channel
-        if hasattr(dest, 'discord'):
-            dest = dest.discord
+            if asyncio.iscoroutine(dest):
+                dest = await dest
+                if hasattr(dest, 'discord'):
+                    await dest.fetch()
+        else:
+            dest = ctx_or_message
 
-        choice_format = "**{}**: {}"
+        choice_format = "{}: **{}**"
 
-        def choice_check(message):
+        def choice_check(_message):
             try:
-                return 1 <= int(message.content.split(maxsplit=1)[0]) <= len(choices)
+                min = 1
+                max = len(choices)
+                _choice_str = _message.content.split(maxsplit=1)[0]
+                _choice_int = int(_choice_str)
+                valid_choice = min <= _choice_int <= max
+                return valid_choice
             except ValueError:
                 return False
 
@@ -546,10 +573,11 @@ class Core(commands.Bot):
         for page in paginator.pages:
             await dest.send(page)
 
-        choice = await self.wait_for_response(ctx_or_message, message_check=choice_check, timeout=timeout)
+        choice = await self.wait_for_response(ctx_or_message, responding=responding, message_check=choice_check,
+                                              timeout=timeout, force_response=force_response)
         if not force_response and choice is None:
             return None
-        return int(choice.split(maxsplit=1)[0])
+        return choices[int(choice.split(maxsplit=1)[0]) - 1]
 
     async def on_error(self, event_method, *args, **kwargs):
         from hero.models import User
@@ -676,7 +704,10 @@ class Core(commands.Bot):
             return
 
         if isinstance(error, commands.UserInputError):
-            await ctx.send("Invalid input.")
+            txt = str(error)
+            if not txt:
+                txt = "Invalid input."
+            await ctx.send(txt)
             await ctx.send_help()
             return
 

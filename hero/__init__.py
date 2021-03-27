@@ -73,7 +73,7 @@ from .i18n import translate
 
 builtins._ = translate
 
-from discord.ext.commands import command, check, cooldown, Context
+from discord.ext.commands import BucketType, command, check, cooldown, Context
 
 from .utils import async_using_db
 from .conf import Config, Extension, ExtensionConfig

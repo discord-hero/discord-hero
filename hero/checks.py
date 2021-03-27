@@ -6,8 +6,8 @@
 
 import hero
 
-from discord.ext.commands import (bot_has_permissions, check, guild_only,
-                                  has_permissions, is_nsfw, is_owner)
+from discord.ext.commands import (bot_has_permissions, bot_has_guild_permissions, check, guild_only,
+                                  has_permissions, has_guild_permissions, is_nsfw, is_owner)
 from discord import TeamMembershipState
 
 
