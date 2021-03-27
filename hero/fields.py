@@ -303,6 +303,10 @@ class MemberField(DiscordField):
     _discord_cls = discord.Member
 
 
+class CategoryField(DiscordField):
+    _discord_cls = discord.CategoryChannel
+
+
 class TextChannelField(DiscordField):
     _discord_cls = discord.TextChannel
 
@@ -358,7 +362,11 @@ class ManyUsersField(ManyDiscordField):
 class ManyGuildsField(ManyDiscordField):
     _discord_cls = discord.Guild
 
-
+    
+class ManyCategoryField(ManyDiscordField):
+    _discord_cls = discord.CategoryChannel
+    
+    
 class ManyTextChannelsField(ManyDiscordField):
     _discord_cls = discord.TextChannel
 

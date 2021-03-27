@@ -639,7 +639,7 @@ class Emoji(DiscordModel):
     _discord_converter_cls = converter.PartialEmojiConverter
 
     @classmethod
-    def sync_from_discord_obj(cls, discord_obj):
+    def sync_from_discord_obj(cls, discord_obj, create_if_new=True):
         """Create a Hero object from a Discord object"""
         if not isinstance(discord_obj, (cls._discord_cls, discord.Emoji)):
             raise TypeError(f"discord_obj has to be a discord.{cls._discord_cls.__name__} "
