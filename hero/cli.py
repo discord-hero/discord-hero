@@ -5,6 +5,8 @@
 """
 
 import os
+import re
+import shutil
 
 import click
 from click import (argument, option, prompt, confirm, echo, echo_via_pager, style, secho as styled_echo,
@@ -24,8 +26,26 @@ def load_correct_dotenv(ctx, param, is_prod):
         pass
     return is_prod
 
+@click.group("main", invoke_without_command=True)
+def dummy_main():
+    pass
 
-@click.group(name='main', invoke_without_command=True)
+@dummy_main.command()
+@click.argument('extension',default="new-extension")
+def extension(extension):
+    templates = os.path.join(os.path.abspath(os.path.dirname(__file__)), "template")
+    dst_dir = os.path.join(os.getcwd(), extension)
+    os.mkdir(dst_dir)
+    for template in os.listdir(templates):
+        copy_src = os.path.join(dst_dir, template)
+        shutil.copy(os.path.join(templates, template), copy_src)
+        with open(copy_src, "r+") as fi:
+            data = fi.read()
+            fi.seek(0)
+            fi.write(re.sub(r'name', extension, data))
+            fi.truncate()
+
+@dummy_main.command(name='start')
 @click.option('-p/-t', '--prod/--test', callback=load_correct_dotenv, default=True)
 @click.option('--namespace', show_default=False,
               default=lambda: os.getenv('NAMESPACE', 'default'))
@@ -48,5 +68,3 @@ def main_cli(prod, namespace, db_type, db_name, db_user, db_password, db_host, d
          cache_host=cache_host, cache_port=cache_port, cache_password=cache_password)
 
 
-command = main_cli.command
-group = main_cli.group

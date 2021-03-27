@@ -122,7 +122,7 @@ setup(
                 "batteries included, allowing you to write powerful Discord applications easily and quickly.",
     entry_points={
         'console_scripts': [
-            'hero=hero.cli:main_cli',
+            'hero=hero.cli:dummy_main',
         ],
     },
     extras_require=extra_requirements,
